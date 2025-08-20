@@ -115,18 +115,18 @@ if st.session_state.queue:
     left, right = st.columns([1, 2])  # left smaller, right bigger
 
     with left:
-    st.markdown("#### 🔀 Reorder")
-    # Use only names (no numbering)
-    reordered = sortables.sort_items(
-        st.session_state.queue,
-        direction="vertical",
-        key=f"sortable_{st.session_state.rev}"
-    )
-    if reordered != st.session_state.queue:
-        st.session_state.queue = reordered
-        st.session_state.rev += 1
-        save_state()
-        st.rerun()
+        st.markdown("#### 🔀 Reorder")
+        # Use only names (no numbering)
+        reordered = sortables.sort_items(
+            st.session_state.queue,
+            direction="vertical",
+            key=f"sortable_{st.session_state.rev}"
+        )
+        if reordered != st.session_state.queue:
+            st.session_state.queue = reordered
+            st.session_state.rev += 1
+            save_state()
+            st.rerun()
 
     with right:
         # ---- Build final output ----
