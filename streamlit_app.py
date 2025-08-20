@@ -38,7 +38,7 @@ def bump_and_rerun():
     st.rerun()
 
 # ---------------- UI ----------------
-st.title("⚔️EPIC Song Queue 2🎭")
+st.title("⚔️EPIC Song Queue 1🎭")
 
 # Input box (Enter = Join)
 def join_on_enter():
@@ -47,20 +47,42 @@ def join_on_enter():
         st.session_state.queue.append(name)
         st.session_state.name_input = ""  # clear input
         save_state()
-        # bump rev so sortable remounts on next render
         st.session_state.rev += 1
         st.session_state.needs_rerun = True
-        
-# ---- Quick Actions ----
+
+st.text_input(
+    "Add to Queue:",
+    key="name_input",
+    on_change=join_on_enter
+)
+
+# --- Top button bar ---
+cols = st.columns(3)
+with cols[0]:
+    if st.button("⏩ Advance", use_container_width=True):
+        if st.session_state.queue:
+            first = st.session_state.queue.pop(0)
+            st.session_state.queue.append(first)
+            bump_and_rerun()
+with cols[1]:
+    if st.button("🧹 Clear All", use_container_width=True):
+        st.session_state.queue.clear()
+        st.session_state.calypso.clear()
+        st.session_state.pinged.clear()
+        bump_and_rerun()
+with cols[2]:
+    st.write(" ")  # spacer
+
+# ---- Quick Actions (tight 2-column layout) ----
 st.markdown("#### Quick Actions")
-qa = st.columns(4)  # now 4 actions
+qa = st.columns(4)  # now 4 actions (Leave, Hold, Return, Ping)
 
 # Init flags
 for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
     if flag not in st.session_state:
         st.session_state[flag] = False
 
-# CSS tighten spacing
+# CSS to shrink spacing
 st.markdown("""
     <style>
     .small-btn button {
@@ -149,6 +171,8 @@ with qa[3]:
 
 # ---- Layout: Reorder (left) + Output (right) ----
 if st.session_state.queue:
+    st.markdown("### Queue Manager")
+
     left, right = st.columns([1, 2])
 
     with left:
@@ -165,11 +189,10 @@ if st.session_state.queue:
             st.rerun()
 
     with right:
-        # ---- Build final output ----
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
 
-        output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 2 🎭\n"
+        output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
         output += ("━━━━━━━━━━━━━━━━━━━━━\n"
                    "🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n"
                    f"✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else '-'}\n")
@@ -201,5 +224,10 @@ if st.session_state.queue:
 
         st.code(output, language="text")
 
+# Always save state at end of render
+save_state()
 
-
+# Force rerun after input enter (fixes reorder not refreshing)
+if st.session_state.get("needs_rerun"):
+    st.session_state.needs_rerun = False
+    st.rerun()
