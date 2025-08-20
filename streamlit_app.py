@@ -43,7 +43,7 @@ with top[2]:
     if st.button("📋 Copy Output", use_container_width=True):
         st.session_state._show_copy_notice = True  # info only; copy via manual select
 
-# Quick action bars (clickable names — no typing)
+# Quick action bars (clickable names — now rows instead of columns)
 st.markdown("#### Quick Actions")
 qa = st.columns(3)
 
@@ -52,9 +52,8 @@ with qa[0]:
     if not st.session_state.queue:
         st.write("—")
     else:
-        cols = st.columns(min(5, len(st.session_state.queue)))
         for i, person in enumerate(st.session_state.queue):
-            if cols[i % len(cols)].button(person, key=f"leave_{i}", use_container_width=True):
+            if st.button(person, key=f"leave_{i}", use_container_width=True):
                 st.session_state.queue.remove(person)
                 bump_and_rerun()
 
@@ -63,9 +62,8 @@ with qa[1]:
     if not st.session_state.queue:
         st.write("—")
     else:
-        cols = st.columns(min(5, len(st.session_state.queue)))
         for i, person in enumerate(st.session_state.queue):
-            if cols[i % len(cols)].button(person, key=f"hold_{i}", use_container_width=True):
+            if st.button(person, key=f"hold_{i}", use_container_width=True):
                 st.session_state.queue.remove(person)
                 st.session_state.calypso.append(person)
                 bump_and_rerun()
@@ -75,12 +73,12 @@ with qa[2]:
     if not st.session_state.calypso:
         st.write("—")
     else:
-        cols = st.columns(min(5, len(st.session_state.calypso)))
         for i, person in enumerate(st.session_state.calypso):
-            if cols[i % len(cols)].button(person, key=f"return_{i}", use_container_width=True):
+            if st.button(person, key=f"return_{i}", use_container_width=True):
                 st.session_state.calypso.remove(person)
                 st.session_state.queue.append(person)
                 bump_and_rerun()
+
 
 # ---- Drag & Drop Reordering (always active, always refreshed) ----
 if st.session_state.queue:
@@ -173,3 +171,4 @@ st.text(output)
 if st.session_state.get("_show_copy_notice"):
     st.info("Select the output above and press Ctrl/Cmd+C to copy.")
     st.session_state._show_copy_notice = False
+
