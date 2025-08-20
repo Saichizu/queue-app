@@ -85,7 +85,7 @@ for flag in ["show_leave", "show_hold", "show_return"]:
 st.markdown("""
     <style>
     .small-btn button {
-        font-size: 12px !important;
+        font-size: 10px !important;
         padding: 2px 6px !important;
         margin: 0px !important;
     }
@@ -220,6 +220,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
