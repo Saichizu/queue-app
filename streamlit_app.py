@@ -115,20 +115,18 @@ if st.session_state.queue:
     left, right = st.columns([1, 2])  # left smaller, right bigger
 
     with left:
-        st.markdown("#### 🔀 Reorder")
-        # Single compact reorder list
-        labeled = [f"{i+1}. {p}" for i, p in enumerate(st.session_state.queue)]
-        reordered = sortables.sort_items(
-            labeled,
-            direction="vertical",
-            key=f"sortable_{st.session_state.rev}"
-        )
-        new_q = [s.split(". ", 1)[1] for s in reordered]
-        if new_q != st.session_state.queue:
-            st.session_state.queue = new_q
-            st.session_state.rev += 1
-            save_state()
-            st.rerun()
+    st.markdown("#### 🔀 Reorder")
+    # Use only names (no numbering)
+    reordered = sortables.sort_items(
+        st.session_state.queue,
+        direction="vertical",
+        key=f"sortable_{st.session_state.rev}"
+    )
+    if reordered != st.session_state.queue:
+        st.session_state.queue = reordered
+        st.session_state.rev += 1
+        save_state()
+        st.rerun()
 
     with right:
         # ---- Build final output ----
@@ -172,6 +170,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
