@@ -115,7 +115,7 @@ with qa[0]:
                 form_key = f"leave_form_{i}"
                 with st.form(form_key):
                     submitted = st.form_submit_button(
-                        f"❌ {person}",
+                        f"{person}",
                         use_container_width=True
                     )
                     if submitted:
@@ -136,7 +136,7 @@ with qa[1]:
                 form_key = f"hold_form_{i}"
                 with st.form(form_key):
                     submitted = st.form_submit_button(
-                        f"⏳ {person}",
+                        f"{person}",
                         use_container_width=True
                     )
                     if submitted:
@@ -158,7 +158,7 @@ with qa[2]:
                 form_key = f"return_form_{i}"
                 with st.form(form_key):
                     submitted = st.form_submit_button(
-                        f"↩️ {person}",
+                        f"{person}",
                         use_container_width=True
                     )
                     if submitted:
@@ -231,6 +231,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
