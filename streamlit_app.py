@@ -51,7 +51,7 @@ def join_on_enter():
 
 
 st.text_input(
-    "Enter your name:",
+    "Add to Queue:",
     key="name_input",
     on_change=join_on_enter
 )
@@ -231,6 +231,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
