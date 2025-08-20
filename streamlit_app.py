@@ -219,6 +219,7 @@ if st.session_state.queue:
                    "📣 — Summon the Bard (Ping)\n"
                    "⏳ — Place Me On Hold\n"
                    "━━━━━━━━━━━━━━━━━━━━━")
+        output += "- None\n"
         output += "by Saichizu"
 
         # Main display + built-in copy button
@@ -232,6 +233,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
