@@ -41,7 +41,7 @@ with cols[5]:
     if st.button("📋 Copy Output"):
         st.success("Copied! (select text below and copy manually if needed)")
 
-# --- Drag & Drop Reordering ---
+# --- Drag & Drop Reordering (always active) ---
 if st.session_state.queue:
     st.markdown("### 🔀 Drag to Reorder Queue")
 
@@ -50,12 +50,11 @@ if st.session_state.queue:
     if n <= 5:
         # Single list
         reordered = sortables.sort_items(
-            st.session_state.queue,
+            [f"{i+1}. {p}" for i, p in enumerate(st.session_state.queue)],
             direction="vertical",
             key="sortable_single"
         )
-        if reordered != st.session_state.queue:
-            st.session_state.queue = reordered
+        new_queue = [item.split(". ", 1)[1] for item in reordered]
 
     elif n <= 10:
         # Split into 2 columns
@@ -65,21 +64,11 @@ if st.session_state.queue:
 
         col1, col2 = st.columns(2)
         with col1:
-            reordered_left = sortables.sort_items(
-                left_items,
-                direction="vertical",
-                key="sortable_left"
-            )
+            reordered_left = sortables.sort_items(left_items, direction="vertical", key="sortable_left")
         with col2:
-            reordered_right = sortables.sort_items(
-                right_items,
-                direction="vertical",
-                key="sortable_right"
-            )
+            reordered_right = sortables.sort_items(right_items, direction="vertical", key="sortable_right")
 
         new_queue = [item.split(". ", 1)[1] for item in reordered_left + reordered_right]
-        if new_queue != st.session_state.queue:
-            st.session_state.queue = new_queue
 
     else:
         # Split into 3 columns
@@ -97,8 +86,10 @@ if st.session_state.queue:
             reordered_3 = sortables.sort_items(col3_items, direction="vertical", key="sortable_col3")
 
         new_queue = [item.split(". ", 1)[1] for item in reordered_1 + reordered_2 + reordered_3]
-        if new_queue != st.session_state.queue:
-            st.session_state.queue = new_queue
+
+    # Always update if different
+    if new_queue != st.session_state.queue:
+        st.session_state.queue = new_queue
 
 # --- Build Queue Output ---
 output = "⚔️🏛️ 𝑺𝒂𝒊𝒄𝒉𝒊𝒛𝒖'𝒔  𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭\n\n"
