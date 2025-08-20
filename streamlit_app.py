@@ -43,7 +43,8 @@ def join_on_enter():
     if name and name not in st.session_state.queue and name not in st.session_state.calypso:
         st.session_state.queue.append(name)
         st.session_state.name_input = ""  # clear input
-        save_state()  # just save, no rerun needed
+        save_state()
+        st.session_state.needs_rerun = True  # mark for rerun
 
 
 st.text_input(
@@ -188,4 +189,11 @@ st.code(output, language="text")
 
 # Always save state at end of render
 save_state()
+
+# Force rerun after input enter (fixes reorder not refreshing)
+if st.session_state.get("needs_rerun"):
+    st.session_state.needs_rerun = False
+    st.rerun()
+
+
 
