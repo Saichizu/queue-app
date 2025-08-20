@@ -35,7 +35,7 @@ def bump_and_rerun():
     st.rerun()
 
 # ---------------- UI ----------------
-st.title("⚔️🏛️ Saichizu's Odyssean Song Queue 🎭")
+st.title("⚔️EPIC Song Queue🎭")
 
 # Input box (Enter = Join)
 def join_on_enter():
@@ -191,7 +191,7 @@ if st.session_state.queue:
 
     with right:
         # ---- Build final output ----
-        output = "⚔️🏛️ 𝑺𝒂𝒊𝒄𝒉𝒊𝒛𝒖'𝒔  𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭\n\n"
+        output = "⚔️🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭\n\n"
         output += ("━━━━━━━━━━━━━━━━━━━━━\n"
                    "🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n"
                    f"✨👑🎤 {st.session_state.queue[0] if len(st.session_state.queue) >= 1 else '-'}\n")
@@ -219,6 +219,7 @@ if st.session_state.queue:
                    "📣 — Summon the Bard (Ping)\n"
                    "⏳ — Place Me On Hold\n"
                    "━━━━━━━━━━━━━━━━━━━━━")
+        output += "by Saichizu"
 
         # Main display + built-in copy button
         st.code(output, language="text")
@@ -231,6 +232,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
