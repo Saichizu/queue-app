@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit_sortables as sortables
 
 # Initialize session state
 if "queue" not in st.session_state:
@@ -11,58 +12,54 @@ st.title("⚔️🏛️ Saichizu's Odyssean Song Queue 🎭")
 # --- Input field ---
 name = st.text_input("Enter your name:")
 
-col1, col2, col3 = st.columns(3)
+# --- Top button bar ---
+col1, col2, col3, col4, col5, col6 = st.columns(6)
 
-# --- Queue Controls ---
 with col1:
-    if st.button("➕ Join Queue") and name:
+    if st.button("➕ Join") and name:
         if name not in st.session_state.queue and name not in st.session_state.calypso:
             st.session_state.queue.append(name)
 
 with col2:
-    if st.button("➖ Leave Queue") and name:
+    if st.button("➖ Leave") and name:
         if name in st.session_state.queue:
             st.session_state.queue.remove(name)
         if name in st.session_state.calypso:
             st.session_state.calypso.remove(name)
 
 with col3:
-    if st.button("⏩ Advance Queue"):
+    if st.button("⏩ Advance"):
         if st.session_state.queue:
             first = st.session_state.queue.pop(0)
             st.session_state.queue.append(first)
 
-# --- Calypso Controls ---
-col4, col5 = st.columns(2)
 with col4:
-    if st.button("⏳ Put On Hold (Calypso)") and name in st.session_state.queue:
+    if st.button("⏳ Hold") and name in st.session_state.queue:
         st.session_state.queue.remove(name)
         st.session_state.calypso.append(name)
 
 with col5:
-    if st.button("🏝️ Return From Calypso") and name in st.session_state.calypso:
+    if st.button("🏝️ Return") and name in st.session_state.calypso:
         st.session_state.calypso.remove(name)
         st.session_state.queue.append(name)
 
-# --- Change Order ---
+with col6:
+    if st.button("📋 Copy Output"):
+        st.session_state.clip_ready = True
+        st.success("Copied! (Select text below and copy manually if needed)")
+
+# --- Drag & Drop Reordering ---
 if st.session_state.queue:
-    st.markdown("### 🔀 Change Order")
-    person_to_move = st.selectbox("Select person to reorder:", st.session_state.queue)
-    new_position = st.number_input(
-        "New position (1 = front of queue)", 
-        min_value=1, 
-        max_value=len(st.session_state.queue), 
-        value=1, 
-        step=1
+    st.markdown("### 🔀 Drag to Reorder Queue")
+    reordered = sortables.sort_items(
+        st.session_state.queue,
+        direction="vertical",
+        key="sortable_list"
     )
-    if st.button("Change Order"):
-        st.session_state.queue.remove(person_to_move)
-        st.session_state.queue.insert(new_position - 1, person_to_move)
-        st.success(f"Moved {person_to_move} to position {new_position}")
+    if reordered != st.session_state.queue:
+        st.session_state.queue = reordered
 
-# --- Display the queue ---
-st.markdown("## 📋 Queue Status")
-
+# --- Build Queue Output ---
 output = "⚔️🏛️ 𝑺𝒂𝒊𝒄𝒉𝒊𝒛𝒖'𝒔  𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭\n\n"
 
 output += ("━━━━━━━━━━━━━━━━━━━━━\n"
@@ -97,10 +94,5 @@ output += ("━━━━━━━━━━━━━━━━━━━━━\n"
            "⏳ — Place Me On Hold\n"
            "━━━━━━━━━━━━━━━━━━━━━")
 
-# Show output nicely
+# --- Display final output ---
 st.text(output)
-
-# --- Copy to clipboard ---
-st.markdown("### 📋 Copy Output")
-st.code(output, language="text")
-st.caption("Copy the above output manually (Streamlit doesn’t allow direct clipboard writes).")
