@@ -157,7 +157,7 @@ with qa[2]:
         st.session_state.show_ping = False
 
     if st.session_state.show_return:
-        person = render_names(st.session_state.calypso, "")
+        person = render_names(st.session_state.calypso, "↩️")
         if person:
             st.session_state.calypso.remove(person)
             st.session_state.queue.append(person)
@@ -242,6 +242,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
