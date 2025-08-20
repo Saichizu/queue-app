@@ -42,8 +42,9 @@ def join_on_enter():
     name = st.session_state.name_input.strip()
     if name and name not in st.session_state.queue and name not in st.session_state.calypso:
         st.session_state.queue.append(name)
-        st.session_state.name_input = ""  # clear box
-        bump_and_rerun()
+        st.session_state.name_input = ""  # clear input
+        save_state()  # just save, no rerun needed
+
 
 st.text_input(
     "Enter your name:",
@@ -187,3 +188,4 @@ st.code(output, language="text")
 
 # Always save state at end of render
 save_state()
+
