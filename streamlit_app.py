@@ -88,11 +88,11 @@ for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
     if flag not in st.session_state:
         st.session_state[flag] = False
 
-# CSS for cleaner pill buttons
+# CSS for compact name buttons
 st.markdown("""
     <style>
-    .action-btn button {
-        font-size: clamp(8px, 1.4vw, 12px) !important;  /* auto shrink but not smaller than 8 */
+    .name-btn button {
+        font-size: clamp(8px, 1.2vw, 12px) !important;  /* auto shrink, min 8px */
         padding: 6px 8px !important;
         margin: 2px !important;
         border-radius: 10px !important;
@@ -109,13 +109,13 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-def render_names(names, action):
+def render_names(names, action_key):
     cols = st.columns(2, gap="small")
     for i, person in enumerate(names):
         col = cols[i % 2]
         with col:
-            st.markdown('<div class="action-btn">', unsafe_allow_html=True)
-            if st.button(f"{action} {person}", key=f"{action}_{i}", use_container_width=True):
+            st.markdown('<div class="name-btn">', unsafe_allow_html=True)
+            if st.button(person, key=f"{action_key}_{i}", use_container_width=True):
                 return person
             st.markdown('</div>', unsafe_allow_html=True)
     return None
@@ -242,6 +242,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
