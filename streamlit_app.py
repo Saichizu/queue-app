@@ -1,49 +1,73 @@
 import streamlit as st
 import streamlit_sortables as sortables
+import json, os
 
-# ---------------- Helpers ----------------
-def ensure_state():
-    if "queue" not in st.session_state: st.session_state.queue = []
-    if "calypso" not in st.session_state: st.session_state.calypso = []
-    if "rev" not in st.session_state: st.session_state.rev = 0  # forces sortable to remount
+# ---------------- Persistence ----------------
+SAVE_FILE = "queue.json"
+
+def load_state():
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        st.session_state.queue = data.get("queue", [])
+        st.session_state.calypso = data.get("calypso", [])
+    else:
+        st.session_state.queue = []
+        st.session_state.calypso = []
+
+def save_state():
+    data = {
+        "queue": st.session_state.queue,
+        "calypso": st.session_state.calypso
+    }
+    with open(SAVE_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f)
+
+# ---------------- Init ----------------
+if "initialized" not in st.session_state:
+    load_state()
+    st.session_state.rev = 0
+    st.session_state.initialized = True
 
 def bump_and_rerun():
+    save_state()
     st.session_state.rev += 1
     st.rerun()
 
-def numbered(items, start_index):
-    # Return ["1. Alice", "2. Bob", ...] starting at start_index
-    return [f"{i+start_index}. {p}" for i, p in enumerate(items)]
-
-def strip_numbers(labeled_items):
-    # Convert ["1. Alice", "2. Bob"] -> ["Alice", "Bob"]
-    return [s.split(". ", 1)[1] if ". " in s else s for s in labeled_items]
-
-# --------------- App ---------------------
-ensure_state()
-
+# ---------------- UI ----------------
 st.title("⚔️🏛️ Saichizu's Odyssean Song Queue 🎭")
 
-# ---- Top input + controls ----
-name = st.text_input("Enter your name:")
+# Input box (Enter = Join)
+def join_on_enter():
+    name = st.session_state.name_input.strip()
+    if name and name not in st.session_state.queue and name not in st.session_state.calypso:
+        st.session_state.queue.append(name)
+        st.session_state.name_input = ""  # clear box
+        bump_and_rerun()
 
-top = st.columns(7)
-with top[0]:
-    if st.button("➕ Join", use_container_width=True) and name:
-        if name not in st.session_state.queue and name not in st.session_state.calypso:
-            st.session_state.queue.append(name)
-            bump_and_rerun()
-with top[1]:
+st.text_input(
+    "Enter your name:",
+    key="name_input",
+    on_change=join_on_enter
+)
+
+# --- Top button bar ---
+cols = st.columns(3)
+with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
         if st.session_state.queue:
             first = st.session_state.queue.pop(0)
             st.session_state.queue.append(first)
             bump_and_rerun()
-with top[2]:
-    if st.button("📋 Copy Output", use_container_width=True):
-        st.session_state._show_copy_notice = True  # info only; copy via manual select
+with cols[1]:
+    if st.button("🧹 Clear All", use_container_width=True):
+        st.session_state.queue.clear()
+        st.session_state.calypso.clear()
+        bump_and_rerun()
+with cols[2]:
+    st.write(" ")  # spacer
 
-# Quick action bars (clickable names — now rows instead of columns)
+# ---- Quick Actions (rows) ----
 st.markdown("#### Quick Actions")
 qa = st.columns(3)
 
@@ -79,39 +103,35 @@ with qa[2]:
                 st.session_state.queue.append(person)
                 bump_and_rerun()
 
-
-# ---- Drag & Drop Reordering (always active, always refreshed) ----
+# ---- Drag & Drop Reordering ----
 if st.session_state.queue:
     st.markdown("### 🔀 Drag to Reorder Queue")
 
     n = len(st.session_state.queue)
-    # Decide columns (1/2/3) and build labeled lists
-    if n <= 5:
-        col_count = 1
-        labeled = numbered(st.session_state.queue, 1)
-        # Unique key includes revision + layout so component remounts when data/layout changes
-        sortable_key = f"sortable_single_{st.session_state.rev}"
-        reordered = sortables.sort_items(labeled, direction="vertical", key=sortable_key)
-        new_q = strip_numbers(reordered)
 
+    def numbered(items, start): return [f"{i+start}. {p}" for i, p in enumerate(items)]
+    def strip_numbers(labeled): return [s.split(". ", 1)[1] if ". " in s else s for s in labeled]
+
+    if n <= 5:
+        reordered = sortables.sort_items(
+            numbered(st.session_state.queue, 1),
+            direction="vertical",
+            key=f"sortable_{st.session_state.rev}"
+        )
+        new_q = strip_numbers(reordered)
     elif n <= 10:
-        col_count = 2
         half = (n + 1) // 2
         left_items = numbered(st.session_state.queue[:half], 1)
         right_items = numbered(st.session_state.queue[half:], half + 1)
 
         c1, c2 = st.columns(2)
         with c1:
-            left_key = f"sortable_left_{st.session_state.rev}"
-            r_left = sortables.sort_items(left_items, direction="vertical", key=left_key)
+            r_left = sortables.sort_items(left_items, direction="vertical", key=f"sortable_l_{st.session_state.rev}")
         with c2:
-            right_key = f"sortable_right_{st.session_state.rev}"
-            r_right = sortables.sort_items(right_items, direction="vertical", key=right_key)
+            r_right = sortables.sort_items(right_items, direction="vertical", key=f"sortable_r_{st.session_state.rev}")
 
         new_q = strip_numbers(r_left + r_right)
-
     else:
-        col_count = 3
         third = (n + 2) // 3
         c1_items = numbered(st.session_state.queue[:third], 1)
         c2_items = numbered(st.session_state.queue[third:2*third], third + 1)
@@ -119,23 +139,19 @@ if st.session_state.queue:
 
         c1, c2, c3 = st.columns(3)
         with c1:
-            k1 = f"sortable_c1_{st.session_state.rev}"
-            r1 = sortables.sort_items(c1_items, direction="vertical", key=k1)
+            r1 = sortables.sort_items(c1_items, direction="vertical", key=f"sortable1_{st.session_state.rev}")
         with c2:
-            k2 = f"sortable_c2_{st.session_state.rev}"
-            r2 = sortables.sort_items(c2_items, direction="vertical", key=k2)
+            r2 = sortables.sort_items(c2_items, direction="vertical", key=f"sortable2_{st.session_state.rev}")
         with c3:
-            k3 = f"sortable_c3_{st.session_state.rev}"
-            r3 = sortables.sort_items(c3_items, direction="vertical", key=k3)
+            r3 = sortables.sort_items(c3_items, direction="vertical", key=f"sortable3_{st.session_state.rev}")
 
         new_q = strip_numbers(r1 + r2 + r3)
 
-    # Apply reordering if changed
     if new_q != st.session_state.queue:
         st.session_state.queue = new_q
         bump_and_rerun()
 
-# ---- Build final output (single display) ----
+# ---- Build final output ----
 output = "⚔️🏛️ 𝑺𝒂𝒊𝒄𝒉𝒊𝒛𝒖'𝒔  𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭\n\n"
 output += ("━━━━━━━━━━━━━━━━━━━━━\n"
            "🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n"
@@ -165,13 +181,9 @@ output += ("━━━━━━━━━━━━━━━━━━━━━\n"
            "⏳ — Place Me On Hold\n"
            "━━━━━━━━━━━━━━━━━━━━━")
 
-# Built-in copy button (Streamlit shows it automatically in st.code)
+# Main display + built-in copy button
+st.text(output)
 st.code(output, language="text")
 
-# Small notice after pressing "Copy Output"
-if st.session_state.get("_show_copy_notice"):
-    st.info("Select the output above and press Ctrl/Cmd+C to copy.")
-    st.session_state._show_copy_notice = False
-
-
-
+# Always save state at end of render
+save_state()
