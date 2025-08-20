@@ -88,19 +88,22 @@ for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
     if flag not in st.session_state:
         st.session_state[flag] = False
 
-# CSS to shrink spacing
+# CSS to shrink spacing + scale text
 st.markdown("""
     <style>
     .small-btn button {
-        font-size: 12px !important;
+        font-size: clamp(8px, 1.8vw, 12px) !important;  /* min 8px, max 12px */
         padding: 2px 6px !important;
         margin: 0px !important;
+        white-space: nowrap;      /* prevent wrapping */
+        overflow: hidden;         /* hide overflow */
+        text-overflow: ellipsis;  /* show ... if too long */
     }
     div[data-testid="stHorizontalBlock"] {
-        gap: 4px !important;
+        gap: 4px !important;  /* reduce space between columns */
     }
     div[data-testid="stVerticalBlock"] {
-        gap: 2px !important;
+        gap: 2px !important;  /* reduce vertical space */
     }
     </style>
 """, unsafe_allow_html=True)
@@ -237,5 +240,6 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
