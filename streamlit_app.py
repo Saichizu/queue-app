@@ -88,16 +88,20 @@ for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
     if flag not in st.session_state:
         st.session_state[flag] = False
 
-# CSS to shrink spacing + scale text
+# CSS to shrink spacing + text control
 st.markdown("""
     <style>
+    .name-btn {
+        font-size: clamp(8px, 1.8vw, 12px);  /* scales, min 8px, max 12px */
+        white-space: nowrap; 
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
     .small-btn button {
-        font-size: clamp(8px, 1.8vw, 12px) !important;  /* min 8px, max 12px */
+        font-size: 12px !important;
         padding: 2px 6px !important;
         margin: 0px !important;
-        white-space: nowrap;      /* prevent wrapping */
-        overflow: hidden;         /* hide overflow */
-        text-overflow: ellipsis;  /* show ... if too long */
     }
     div[data-testid="stHorizontalBlock"] {
         gap: 4px !important;  /* reduce space between columns */
@@ -113,9 +117,12 @@ def render_names(names, action):
     for i, person in enumerate(names):
         col = cols[i % 2]
         with col:
+            display_name = f"{person}"
             st.markdown('<div class="small-btn">', unsafe_allow_html=True)
-            if st.button(f"{action} {person}", key=f"{action}_{i}", use_container_width=True):
+            # put person inside span so CSS truncation applies
+            if st.button(f"{action} ", key=f"{action}_{i}", use_container_width=True):
                 return person
+            st.markdown(f"<span class='name-btn'>{display_name}</span>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
     return None
 
@@ -240,6 +247,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
