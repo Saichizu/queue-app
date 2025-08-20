@@ -40,7 +40,7 @@ def bump_and_rerun():
 # ---------------- UI ----------------
 st.title("⚔️EPIC Song Queue 1🎭")
 
-# Input box (Enter = Join)
+# Input box + Join button in same row
 def join_on_enter():
     name = st.session_state.name_input.strip()
     if name and name not in st.session_state.queue and name not in st.session_state.calypso:
@@ -50,17 +50,17 @@ def join_on_enter():
         st.session_state.rev += 1
         st.session_state.needs_rerun = True
 
-col_inp, col_btn = st.columns([3,1])
-with col_inp:
+# Two columns: input (wide) + button (narrow)
+col1, col2 = st.columns([4,1])
+with col1:
     st.text_input(
         "Add to Queue:",
         key="name_input",
-        on_change=join_on_enter
+        on_change=join_on_enter,
+        label_visibility="collapsed"  # hides the "Add to Queue:" label
     )
-with col_btn:
-    if st.button("🎤 Join", use_container_width=True):
-        join_on_enter()
-
+with col2:
+    st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
 
 # --- Top button bar ---
 cols = st.columns(3)
@@ -237,4 +237,5 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
