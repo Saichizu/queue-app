@@ -40,6 +40,17 @@ def bump_and_rerun():
 # ---------------- UI ----------------
 st.title("⚔️EPIC Song Queue 2🎭")
 
+# Input box (Enter = Join)
+def join_on_enter():
+    name = st.session_state.name_input.strip()
+    if name and name not in st.session_state.queue and name not in st.session_state.calypso:
+        st.session_state.queue.append(name)
+        st.session_state.name_input = ""  # clear input
+        save_state()
+        # bump rev so sortable remounts on next render
+        st.session_state.rev += 1
+        st.session_state.needs_rerun = True
+        
 # ---- Quick Actions ----
 st.markdown("#### Quick Actions")
 qa = st.columns(4)  # now 4 actions
@@ -189,5 +200,6 @@ if st.session_state.queue:
         output += "by Saichizu :)"
 
         st.code(output, language="text")
+
 
 
