@@ -44,7 +44,10 @@ def join_on_enter():
         st.session_state.queue.append(name)
         st.session_state.name_input = ""  # clear input
         save_state()
-        st.session_state.needs_rerun = True  # mark for rerun
+        # bump rev so sortable remounts on next render
+        st.session_state.rev += 1
+        st.session_state.needs_rerun = True
+
 
 
 st.text_input(
@@ -194,6 +197,8 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
+
 
 
 
