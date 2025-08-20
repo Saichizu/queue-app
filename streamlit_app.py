@@ -26,6 +26,17 @@ def save_state():
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f)
 
+# ---------------- Init ----------------
+if "initialized" not in st.session_state:
+    load_state()
+    st.session_state.rev = 0
+    st.session_state.initialized = True
+
+def bump_and_rerun():
+    save_state()
+    st.session_state.rev += 1
+    st.rerun()
+
 # ---------------- UI ----------------
 st.title("⚔️EPIC Song Queue 2🎭")
 
@@ -178,4 +189,5 @@ if st.session_state.queue:
         output += "by Saichizu :)"
 
         st.code(output, language="text")
+
 
