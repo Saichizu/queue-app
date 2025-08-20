@@ -72,41 +72,65 @@ with cols[1]:
 with cols[2]:
     st.write(" ")  # spacer
 
-# ---- Quick Actions (rows) ----
+# ---- Quick Actions (collapsed rows) ----
 st.markdown("#### Quick Actions")
 qa = st.columns(3)
 
+# Init flags
+if "show_leave" not in st.session_state:
+    st.session_state.show_leave = False
+if "show_hold" not in st.session_state:
+    st.session_state.show_hold = False
+if "show_return" not in st.session_state:
+    st.session_state.show_return = False
+
 with qa[0]:
-    st.caption("➖ Leave (Queue)")
-    if not st.session_state.queue:
-        st.write("—")
-    else:
-        for i, person in enumerate(st.session_state.queue):
-            if st.button(person, key=f"leave_{i}", use_container_width=True):
-                st.session_state.queue.remove(person)
-                bump_and_rerun()
+    if st.button("➖ Leave", use_container_width=True):
+        st.session_state.show_leave = not st.session_state.show_leave
+        st.session_state.show_hold = False
+        st.session_state.show_return = False
+
+    if st.session_state.show_leave:
+        if not st.session_state.queue:
+            st.write("—")
+        else:
+            for i, person in enumerate(st.session_state.queue):
+                if st.button(person, key=f"leave_{i}", use_container_width=True):
+                    st.session_state.queue.remove(person)
+                    bump_and_rerun()
 
 with qa[1]:
-    st.caption("⏳ Hold (to Calypso)")
-    if not st.session_state.queue:
-        st.write("—")
-    else:
-        for i, person in enumerate(st.session_state.queue):
-            if st.button(person, key=f"hold_{i}", use_container_width=True):
-                st.session_state.queue.remove(person)
-                st.session_state.calypso.append(person)
-                bump_and_rerun()
+    if st.button("⏳ Hold", use_container_width=True):
+        st.session_state.show_hold = not st.session_state.show_hold
+        st.session_state.show_leave = False
+        st.session_state.show_return = False
+
+    if st.session_state.show_hold:
+        if not st.session_state.queue:
+            st.write("—")
+        else:
+            for i, person in enumerate(st.session_state.queue):
+                if st.button(person, key=f"hold_{i}", use_container_width=True):
+                    st.session_state.queue.remove(person)
+                    st.session_state.calypso.append(person)
+                    bump_and_rerun()
 
 with qa[2]:
-    st.caption("🏝️ Return (from Calypso)")
-    if not st.session_state.calypso:
-        st.write("—")
-    else:
-        for i, person in enumerate(st.session_state.calypso):
-            if st.button(person, key=f"return_{i}", use_container_width=True):
-                st.session_state.calypso.remove(person)
-                st.session_state.queue.append(person)
-                bump_and_rerun()
+    if st.button("🏝️ Return", use_container_width=True):
+        st.session_state.show_return = not st.session_state.show_return
+        st.session_state.show_leave = False
+        st.session_state.show_hold = False
+
+    if st.session_state.show_return:
+        if not st.session_state.calypso:
+            st.write("—")
+        else:
+            for i, person in enumerate(st.session_state.calypso):
+                if st.button(person, key=f"return_{i}", use_container_width=True):
+                    st.session_state.calypso.remove(person)
+                    st.session_state.queue.append(person)
+                    bump_and_rerun()
+
 
 # ---- Layout: Reorder (left) + Output (right) ----
 if st.session_state.queue:
@@ -170,6 +194,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
