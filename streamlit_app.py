@@ -50,11 +50,17 @@ def join_on_enter():
         st.session_state.rev += 1
         st.session_state.needs_rerun = True
 
-st.text_input(
-    "Add to Queue:",
-    key="name_input",
-    on_change=join_on_enter
-)
+col_inp, col_btn = st.columns([3,1])
+with col_inp:
+    st.text_input(
+        "Add to Queue:",
+        key="name_input",
+        on_change=join_on_enter
+    )
+with col_btn:
+    if st.button("🎤 Join", use_container_width=True):
+        join_on_enter()
+
 
 # --- Top button bar ---
 cols = st.columns(3)
@@ -231,3 +237,4 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
