@@ -162,7 +162,6 @@ if st.session_state.queue:
                    "━━━━━━━━━━━━━━━━━━━━━")
 
         # Main display + built-in copy button
-        st.text(output)
         st.code(output, language="text")
 
 
@@ -173,6 +172,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
