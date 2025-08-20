@@ -165,8 +165,6 @@ output += ("━━━━━━━━━━━━━━━━━━━━━\n"
            "⏳ — Place Me On Hold\n"
            "━━━━━━━━━━━━━━━━━━━━━")
 
-st.text(output)
-
 # Built-in copy button (Streamlit shows it automatically in st.code)
 st.code(output, language="text")
 
@@ -174,5 +172,6 @@ st.code(output, language="text")
 if st.session_state.get("_show_copy_notice"):
     st.info("Select the output above and press Ctrl/Cmd+C to copy.")
     st.session_state._show_copy_notice = False
+
 
 
