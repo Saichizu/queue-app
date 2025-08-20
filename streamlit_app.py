@@ -108,87 +108,63 @@ with qa[2]:
                 st.session_state.queue.append(person)
                 bump_and_rerun()
 
-# ---- Drag & Drop Reordering ----
+# ---- Layout: Reorder (left) + Output (right) ----
 if st.session_state.queue:
-    st.markdown("### 🔀 Drag to Reorder Queue")
+    st.markdown("### Queue Manager")
 
-    n = len(st.session_state.queue)
+    left, right = st.columns([1, 2])  # left smaller, right bigger
 
-    def numbered(items, start): return [f"{i+start}. {p}" for i, p in enumerate(items)]
-    def strip_numbers(labeled): return [s.split(". ", 1)[1] if ". " in s else s for s in labeled]
-
-    if n <= 5:
+    with left:
+        st.markdown("#### 🔀 Reorder")
+        # Single compact reorder list
+        labeled = [f"{i+1}. {p}" for i, p in enumerate(st.session_state.queue)]
         reordered = sortables.sort_items(
-            numbered(st.session_state.queue, 1),
+            labeled,
             direction="vertical",
             key=f"sortable_{st.session_state.rev}"
         )
-        new_q = strip_numbers(reordered)
-    elif n <= 10:
-        half = (n + 1) // 2
-        left_items = numbered(st.session_state.queue[:half], 1)
-        right_items = numbered(st.session_state.queue[half:], half + 1)
+        new_q = [s.split(". ", 1)[1] for s in reordered]
+        if new_q != st.session_state.queue:
+            st.session_state.queue = new_q
+            st.session_state.rev += 1
+            save_state()
+            st.rerun()
 
-        c1, c2 = st.columns(2)
-        with c1:
-            r_left = sortables.sort_items(left_items, direction="vertical", key=f"sortable_l_{st.session_state.rev}")
-        with c2:
-            r_right = sortables.sort_items(right_items, direction="vertical", key=f"sortable_r_{st.session_state.rev}")
+    with right:
+        # ---- Build final output ----
+        output = "⚔️🏛️ 𝑺𝒂𝒊𝒄𝒉𝒊𝒛𝒖'𝒔  𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭\n\n"
+        output += ("━━━━━━━━━━━━━━━━━━━━━\n"
+                   "🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n"
+                   f"✨👑🎤 {st.session_state.queue[0] if len(st.session_state.queue) >= 1 else '-'}\n")
+        output += ("━━━━━━━━━━━━━━━━━━━━━\n"
+                   "⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n"
+                   f"🌟 {st.session_state.queue[1] if len(st.session_state.queue) >= 2 else '-'}\n")
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
+        if len(st.session_state.queue) > 2:
+            for person in st.session_state.queue[2:]:
+                output += f"🎭 {person}\n"
+        else:
+            output += "- None\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
+        if st.session_state.calypso:
+            for person in st.session_state.calypso:
+                output += f"🌴 {person}\n"
+        else:
+            output += "- None\n"
+        output += ("━━━━━━━━━━━━━━━━━━━━━\n"
+                   "React to join the legend:\n"
+                   "🎤 — Join the Queue\n"
+                   "🚪 — Leave the Queue\n"
+                   "📣 — Summon the Bard (Ping)\n"
+                   "⏳ — Place Me On Hold\n"
+                   "━━━━━━━━━━━━━━━━━━━━━")
 
-        new_q = strip_numbers(r_left + r_right)
-    else:
-        third = (n + 2) // 3
-        c1_items = numbered(st.session_state.queue[:third], 1)
-        c2_items = numbered(st.session_state.queue[third:2*third], third + 1)
-        c3_items = numbered(st.session_state.queue[2*third:], 2*third + 1)
+        # Main display + built-in copy button
+        st.text(output)
+        st.code(output, language="text")
 
-        c1, c2, c3 = st.columns(3)
-        with c1:
-            r1 = sortables.sort_items(c1_items, direction="vertical", key=f"sortable1_{st.session_state.rev}")
-        with c2:
-            r2 = sortables.sort_items(c2_items, direction="vertical", key=f"sortable2_{st.session_state.rev}")
-        with c3:
-            r3 = sortables.sort_items(c3_items, direction="vertical", key=f"sortable3_{st.session_state.rev}")
-
-        new_q = strip_numbers(r1 + r2 + r3)
-
-    if new_q != st.session_state.queue:
-        st.session_state.queue = new_q
-        bump_and_rerun()
-
-# ---- Build final output ----
-output = "⚔️🏛️ 𝑺𝒂𝒊𝒄𝒉𝒊𝒛𝒖'𝒔  𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭\n\n"
-output += ("━━━━━━━━━━━━━━━━━━━━━\n"
-           "🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n"
-           f"✨👑🎤 {st.session_state.queue[0] if len(st.session_state.queue) >= 1 else '-'}\n")
-output += ("━━━━━━━━━━━━━━━━━━━━━\n"
-           "⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n"
-           f"🌟 {st.session_state.queue[1] if len(st.session_state.queue) >= 2 else '-'}\n")
-output += "━━━━━━━━━━━━━━━━━━━━━\n"
-output += "🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
-if len(st.session_state.queue) > 2:
-    for person in st.session_state.queue[2:]:
-        output += f"🎭 {person}\n"
-else:
-    output += "- None\n"
-output += "━━━━━━━━━━━━━━━━━━━━━\n"
-output += "🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
-if st.session_state.calypso:
-    for person in st.session_state.calypso:
-        output += f"🌴 {person}\n"
-else:
-    output += "- None\n"
-output += ("━━━━━━━━━━━━━━━━━━━━━\n"
-           "React to join the legend:\n"
-           "🎤 — Join the Queue\n"
-           "🚪 — Leave the Queue\n"
-           "📣 — Summon the Bard (Ping)\n"
-           "⏳ — Place Me On Hold\n"
-           "━━━━━━━━━━━━━━━━━━━━━")
-
-# Main display + built-in copy button
-st.text(output)
-st.code(output, language="text")
 
 # Always save state at end of render
 save_state()
@@ -197,6 +173,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
