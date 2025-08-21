@@ -89,7 +89,7 @@ with cols[2]:
         st.rerun()
 
 with cols[3]:
-    claim_cols = st.columns([2,1])
+    claim_cols = st.columns([5, 1])  # Try 5:1 or 4:1 ratio for more space
     with claim_cols[0]:
         name_input = st.text_input(
             "Enter your name to manage the queue:",
@@ -114,7 +114,7 @@ with cols[3]:
             args=(name_input,),
             use_container_width=True
         )
-    # Enter key handling (if you want immediate claim on typing "Enter")
+    # Enter key handling
     if name_input and name_input != st.session_state.last_claimed_input:
         claim_manager(name_input)
         st.session_state.last_claimed_input = name_input
@@ -281,3 +281,4 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
+
