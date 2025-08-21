@@ -60,8 +60,27 @@ if st.session_state.current_manager:
 else:
     st.info("💡 No one is currently managing the queue. Press 'Manage Queue' to take control.")
 
+# ---------------- Manager Name Input ----------------
+name_input = st.text_input(
+    "Enter your name to manage the queue:",
+    key="manager_input",
+    label_visibility="collapsed",
+    placeholder="Type your name"
+)
+
+def claim_manager(name):
+    if name:
+        if st.session_state.get("current_manager") and st.session_state.current_manager != name:
+            st.warning(f"You are now replacing **{st.session_state.current_manager}** as manager.")
+        else:
+            st.success("You are now managing the queue.")
+        st.session_state.current_user = name
+        st.session_state.current_manager = name
+        save_state()
+        st.session_state.needs_rerun = True
+
 # ---------------- Top button bar ----------------
-cols = st.columns(5)  # Advance, Clear, Refresh, Manage, Spacer
+cols = st.columns(5)  # Advance, Clear, Refresh, Claim Queue, Spacer
 
 with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
@@ -89,38 +108,19 @@ with cols[2]:
         st.rerun()
 
 with cols[3]:
-    claim_cols = st.columns([5, 1])  # Try 5:1 or 4:1 ratio for more space
-    with claim_cols[0]:
-        name_input = st.text_input(
-            "Enter your name to manage the queue:",
-            key="manager_input",
-            label_visibility="collapsed",
-            placeholder="Type your name"
-        )
-    def claim_manager(name):
-        if name:
-            if st.session_state.get("current_manager") and st.session_state.current_manager != name:
-                st.warning(f"You are now replacing **{st.session_state.current_manager}** as manager.")
-            else:
-                st.success("You are now managing the queue.")
-            st.session_state.current_user = name
-            st.session_state.current_manager = name
-            save_state()
-            st.session_state.needs_rerun = True
-    with claim_cols[1]:
-        st.button(
-            "🛠 Claim Queue",
-            on_click=claim_manager,
-            args=(name_input,),
-            use_container_width=True
-        )
-    # Enter key handling
-    if name_input and name_input != st.session_state.last_claimed_input:
-        claim_manager(name_input)
-        st.session_state.last_claimed_input = name_input
+    if st.button("🛠 Claim Queue", use_container_width=True):
+        if name_input:
+            claim_manager(name_input)
+        else:
+            st.warning("Type your name before claiming the queue.")
 
 with cols[4]:
     st.write(" ")  # spacer
+
+# Enter key handling for manager name input
+if name_input and name_input != st.session_state.last_claimed_input:
+    claim_manager(name_input)
+    st.session_state.last_claimed_input = name_input
 
 # ---------------- Input to join ----------------
 def join_on_enter():
@@ -281,4 +281,3 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
-
