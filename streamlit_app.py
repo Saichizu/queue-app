@@ -92,7 +92,6 @@ with cols[3]:
         label_visibility="collapsed"
     )
 
-    # Only update when button is pressed
     def claim_manager(name):
         if name:
             if st.session_state.get("current_manager") and st.session_state.current_manager != name:
@@ -101,6 +100,7 @@ with cols[3]:
                 st.success("You are now managing the queue.")
             st.session_state.current_user = name
             st.session_state.current_manager = name
+
             # Save manager in the JSON
             if os.path.exists(SAVE_FILE):
                 with open(SAVE_FILE, "r", encoding="utf-8") as f:
@@ -110,10 +110,17 @@ with cols[3]:
             data["current_manager"] = name
             with open(SAVE_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f)
-            st.experimental_rerun()  # Safe inside button callback
 
-    # Button alternative
+            # Set rerun flag instead of calling directly
+            st.session_state.rerun_needed = True
+
     st.button("🛠 Claim Queue", on_click=claim_manager, args=(name_input,), use_container_width=True)
+
+# ---- End of script ----
+if st.session_state.get("rerun_needed"):
+    st.session_state.rerun_needed = False
+    st.experimental_rerun()
+
 
 
 
@@ -289,5 +296,6 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
