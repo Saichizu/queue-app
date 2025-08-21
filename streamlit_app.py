@@ -64,7 +64,7 @@ else:
     st.info("💡 No one is currently managing the queue. Press 'Manage Queue' to take control.")
 
 # ----------- Manager Name Input & Claim Button -----------
-claim_cols = st.columns([4, 1])
+claim_cols = st.columns([4, 1, 1])
 with claim_cols[0]:
     manager_name = st.text_input(
         "Type your name",
@@ -93,11 +93,20 @@ def handle_claim_request(name):
             really_claim_manager(name)
 
 with claim_cols[1]:
-    if st.button("🛠 Claim Queue", use_container_width=True):
+    if st.button("🛠 Manage Queue", use_container_width=True):
         if manager_name:
             handle_claim_request(manager_name)
         else:
             st.warning("Type your name before claiming the queue.")
+
+with claim_cols[2]:
+    if st.session_state.current_user == st.session_state.current_manager and st.session_state.current_manager:
+        if st.button("🔓 Release Manage Rights", use_container_width=True):
+            st.session_state.current_manager = ""
+            st.session_state.current_user = ""
+            save_state()
+            st.success("You have released manage rights.")
+            st.rerun()
 
 # Prompt for manager replacement
 if st.session_state.show_manager_confirm:
@@ -258,6 +267,7 @@ if st.session_state.queue:
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
         output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
+        output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\n"
         output += f"🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue)>=1 else '-'}\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\n"
@@ -300,6 +310,10 @@ st.markdown("""
 
 # --- Credit at bottom ---
 st.markdown('<div style="text-align:center; font-size:11px; color:gray; margin-top:18px;">credit: Saichizu</div>', unsafe_allow_html=True)
+
+
+
+
 
 
 
