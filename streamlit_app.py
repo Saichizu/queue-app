@@ -63,21 +63,29 @@ with col2:
     st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
 
 # --- Top button bar ---
-cols = st.columns(3)
+cols = st.columns(4)  # add one more column for Refresh
 with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
         if st.session_state.queue:
             first = st.session_state.queue.pop(0)
             st.session_state.queue.append(first)
             bump_and_rerun()
+
 with cols[1]:
     if st.button("🧹 Clear All", use_container_width=True):
         st.session_state.queue.clear()
         st.session_state.calypso.clear()
         st.session_state.pinged.clear()
         bump_and_rerun()
+
 with cols[2]:
+    if st.button("🔄 Refresh", use_container_width=True):
+        st.session_state.rev += 1  # bump revision
+        st.rerun()
+
+with cols[3]:
     st.write(" ")  # spacer
+
 
 # ---- Quick Actions (tight 2-column layout) ----
 st.markdown("#### Quick Actions")
@@ -242,6 +250,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
