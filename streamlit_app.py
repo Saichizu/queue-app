@@ -34,12 +34,17 @@ if "initialized" not in st.session_state:
     load_state()
     st.session_state.rev = 0
     st.session_state.initialized = True
-    st.session_state.current_user = ""  # user using this session
+    st.session_state.current_user = ""
     st.session_state.needs_rerun = False
+    st.session_state.last_claimed_input = ""
+    # Initialize flags for quick actions
+    for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
+        st.session_state[flag] = False
 
 def bump_and_rerun():
     save_state()
     st.session_state.rev += 1
+    st.session_state.needs_rerun = True
     st.rerun()
 
 # ---------------- UI ----------------
@@ -93,9 +98,6 @@ with cols[3]:
         placeholder="Type your name and press Enter or click Claim Queue"
     )
 
-    if "last_claimed_input" not in st.session_state:
-        st.session_state.last_claimed_input = ""
-
     def claim_manager(name):
         if name:
             if st.session_state.get("current_manager") and st.session_state.current_manager != name:
@@ -104,20 +106,9 @@ with cols[3]:
                 st.success("You are now managing the queue.")
             st.session_state.current_user = name
             st.session_state.current_manager = name
+            save_state()
+            st.session_state.needs_rerun = True
 
-            # Save manager in JSON
-            data = {}
-            if os.path.exists(SAVE_FILE):
-                with open(SAVE_FILE, "r", encoding="utf-8") as f:
-                    data = json.load(f)
-            data["current_manager"] = name
-            with open(SAVE_FILE, "w", encoding="utf-8") as f:
-                json.dump(data, f)
-
-            # Set rerun flag
-            st.session_state.rerun_needed = True
-
-    # Button alternative
     st.button("🛠 Claim Queue", on_click=claim_manager, args=(name_input,), use_container_width=True)
 
     # Enter key handling
@@ -125,21 +116,12 @@ with cols[3]:
         claim_manager(name_input)
         st.session_state.last_claimed_input = name_input
 
-# ---- End of script ----
-if st.session_state.get("rerun_needed"):
-    st.session_state.rerun_needed = False
-    st.experimental_rerun()
-
-
-
-
-
 with cols[4]:
     st.write(" ")  # spacer
 
 # ---------------- Input to join ----------------
 def join_on_enter():
-    name = st.session_state.name_input.strip()
+    name = st.session_state.get("name_input", "").strip()
     if name and name not in st.session_state.queue and name not in st.session_state.calypso:
         st.session_state.queue.append(name)
         st.session_state.name_input = ""
@@ -162,26 +144,6 @@ with col2:
 st.markdown("#### Quick Actions")
 qa = st.columns(4)
 
-for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
-    if flag not in st.session_state:
-        st.session_state[flag] = False
-
-st.markdown("""
-    <style>
-    .name-btn button {
-        font-size: clamp(8px, 1.2vw, 12px) !important;
-        padding: 6px 8px !important;
-        margin: 2px !important;
-        border-radius: 10px !important;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    div[data-testid="stHorizontalBlock"] { gap: 6px !important; }
-    div[data-testid="stVerticalBlock"] { gap: 4px !important; }
-    </style>
-""", unsafe_allow_html=True)
-
 def render_names(names, action_key):
     cols = st.columns(2, gap="small")
     for i, person in enumerate(names):
@@ -193,15 +155,12 @@ def render_names(names, action_key):
             st.markdown('</div>', unsafe_allow_html=True)
     return None
 
-# Only allow actions if user is manager
 if st.session_state.current_user == st.session_state.current_manager:
-
     with qa[0]:
         if st.button("➖ Leave", use_container_width=True):
             st.session_state.show_leave = not st.session_state.show_leave
-            st.session_state.show_hold = False
-            st.session_state.show_return = False
-            st.session_state.show_ping = False
+            for flag in ["show_hold", "show_return", "show_ping"]:
+                st.session_state[flag] = False
         if st.session_state.show_leave:
             person = render_names(st.session_state.queue, "Leave")
             if person:
@@ -212,9 +171,8 @@ if st.session_state.current_user == st.session_state.current_manager:
     with qa[1]:
         if st.button("⏳ Hold", use_container_width=True):
             st.session_state.show_hold = not st.session_state.show_hold
-            st.session_state.show_leave = False
-            st.session_state.show_return = False
-            st.session_state.show_ping = False
+            for flag in ["show_leave", "show_return", "show_ping"]:
+                st.session_state[flag] = False
         if st.session_state.show_hold:
             person = render_names(st.session_state.queue, "Hold")
             if person:
@@ -225,9 +183,8 @@ if st.session_state.current_user == st.session_state.current_manager:
     with qa[2]:
         if st.button("🏝️ Return", use_container_width=True):
             st.session_state.show_return = not st.session_state.show_return
-            st.session_state.show_leave = False
-            st.session_state.show_hold = False
-            st.session_state.show_ping = False
+            for flag in ["show_leave", "show_hold", "show_ping"]:
+                st.session_state[flag] = False
         if st.session_state.show_return:
             person = render_names(st.session_state.calypso, "↩️")
             if person:
@@ -238,9 +195,8 @@ if st.session_state.current_user == st.session_state.current_manager:
     with qa[3]:
         if st.button("📣 Ping/Unping", use_container_width=True):
             st.session_state.show_ping = not st.session_state.show_ping
-            st.session_state.show_leave = False
-            st.session_state.show_hold = False
-            st.session_state.show_return = False
+            for flag in ["show_leave", "show_hold", "show_return"]:
+                st.session_state[flag] = False
         if st.session_state.show_ping:
             names = st.session_state.queue + st.session_state.calypso
             person = render_names(names, "📣")
@@ -268,8 +224,8 @@ if st.session_state.queue:
             )
             if reordered != st.session_state.queue:
                 st.session_state.queue = reordered
-                st.session_state.rev += 1
                 save_state()
+                st.session_state.rev += 1
                 st.rerun()
         else:
             st.info("🔹 Only the manager can reorder the queue.")
@@ -299,14 +255,26 @@ if st.session_state.queue:
         output += "by Saichizu :)"
         st.code(output, language="text")
 
-# Save state
+# Save state only once per session run
 save_state()
 
-# Force rerun after input enter
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
 
-
-
-
+# --- Style ---
+st.markdown("""
+    <style>
+    .name-btn button {
+        font-size: clamp(8px, 1.2vw, 12px) !important;
+        padding: 6px 8px !important;
+        margin: 2px !important;
+        border-radius: 10px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    div[data-testid="stHorizontalBlock"] { gap: 6px !important; }
+    div[data-testid="stVerticalBlock"] { gap: 4px !important; }
+    </style>
+""", unsafe_allow_html=True)
