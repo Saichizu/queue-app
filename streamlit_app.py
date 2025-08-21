@@ -85,17 +85,31 @@ with cols[2]:
         st.rerun()
 
 with cols[3]:
-    if st.button("🛠 Manage Queue", use_container_width=True):
-        name_input = st.text_input("Enter your name to manage the queue:", key="manager_input")
+    # Text input for manager
+    name_input = st.text_input(
+        "Enter your name to manage the queue:",
+        key="manager_input",
+        label_visibility="collapsed"
+    )
+
+    def claim_manager():
         if name_input:
             if st.session_state.current_manager and st.session_state.current_manager != name_input:
                 st.warning(f"You are now replacing **{st.session_state.current_manager}** as manager.")
             else:
-                st.success(f"You are now managing the queue.")
+                st.success("You are now managing the queue.")
             st.session_state.current_user = name_input
             st.session_state.current_manager = name_input
             save_state()
             st.experimental_rerun()
+
+    # Trigger claim when pressing Enter in the text_input
+    if st.session_state.get("manager_input") != "":
+        claim_manager()
+
+    # Alternative button to claim
+    st.button("🛠 Claim Queue", on_click=claim_manager, use_container_width=True)
+
 
 with cols[4]:
     st.write(" ")  # spacer
@@ -269,3 +283,4 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
