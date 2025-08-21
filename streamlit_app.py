@@ -28,6 +28,7 @@ def save_state():
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f)
 
+# --- Always load state at the top ---
 load_state()
 
 if "initialized" not in st.session_state:
@@ -40,6 +41,10 @@ if "initialized" not in st.session_state:
     st.session_state.manager_candidate = ""
     for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
         st.session_state[flag] = False
+
+from streamlit_autorefresh import st_autorefresh
+if st.session_state.current_user != st.session_state.current_manager:
+    st_autorefresh(interval=3000)
 
 def bump_and_rerun():
     save_state()
@@ -138,7 +143,7 @@ with cols[2]:
 with cols[3]:
     st.write("")  # spacer
 with cols[4]:
-    st.write("")  # another spacer if needed
+    st.write("")  # extra spacer for layout
 
 # ----------- Input to join (side by side, with placeholder) -----------
 def join_on_enter():
@@ -268,6 +273,7 @@ if st.session_state.queue:
         else:
             output += "- None\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\nReact to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "by Saichizu :)"
         st.code(output, language="text")
 
 save_state()
