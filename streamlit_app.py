@@ -60,14 +60,15 @@ if st.session_state.current_manager:
 else:
     st.info("💡 No one is currently managing the queue. Press 'Manage Queue' to take control.")
 
-# ---------------- Manager Name Input ----------------
-name_input = st.text_input(
-    "Enter your name to manage the queue:",
-    key="manager_input",
-    label_visibility="collapsed",
-    placeholder="Type your name"
-)
-
+# ---------------- Manager Name Input & Claim Button (side by side) ----------------
+claim_cols = st.columns([4, 1])
+with claim_cols[0]:
+    manager_name = st.text_input(
+        "Type your name",
+        key="manager_input",
+        label_visibility="collapsed",
+        placeholder="Type your name"
+    )
 def claim_manager(name):
     if name:
         if st.session_state.get("current_manager") and st.session_state.current_manager != name:
@@ -78,9 +79,20 @@ def claim_manager(name):
         st.session_state.current_manager = name
         save_state()
         st.session_state.needs_rerun = True
+with claim_cols[1]:
+    if st.button("🛠 Claim Queue", use_container_width=True):
+        if manager_name:
+            claim_manager(manager_name)
+        else:
+            st.warning("Type your name before claiming the queue.")
+
+# Enter key handling for manager name input
+if manager_name and manager_name != st.session_state.last_claimed_input:
+    claim_manager(manager_name)
+    st.session_state.last_claimed_input = manager_name
 
 # ---------------- Top button bar ----------------
-cols = st.columns(5)  # Advance, Clear, Refresh, Claim Queue, Spacer
+cols = st.columns(4)  # Advance, Clear, Refresh, Spacer
 
 with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
@@ -108,21 +120,9 @@ with cols[2]:
         st.rerun()
 
 with cols[3]:
-    if st.button("🛠 Claim Queue", use_container_width=True):
-        if name_input:
-            claim_manager(name_input)
-        else:
-            st.warning("Type your name before claiming the queue.")
-
-with cols[4]:
     st.write(" ")  # spacer
 
-# Enter key handling for manager name input
-if name_input and name_input != st.session_state.last_claimed_input:
-    claim_manager(name_input)
-    st.session_state.last_claimed_input = name_input
-
-# ---------------- Input to join ----------------
+# ---------------- Input to join (side by side, with placeholder) ----------------
 def join_on_enter():
     name = st.session_state.get("name_input", "").strip()
     if name and name not in st.session_state.queue and name not in st.session_state.calypso:
@@ -132,15 +132,16 @@ def join_on_enter():
         st.session_state.rev += 1
         st.session_state.needs_rerun = True
 
-col1, col2 = st.columns([4,1])
-with col1:
+join_cols = st.columns([4, 1])
+with join_cols[0]:
     st.text_input(
-        "Add to Queue:",
+        "",
         key="name_input",
         on_change=join_on_enter,
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        placeholder="Add People"
     )
-with col2:
+with join_cols[1]:
     st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
 
 # ---- Quick Actions (Leave, Hold, Return, Ping) ----
