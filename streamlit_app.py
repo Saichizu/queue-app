@@ -37,7 +37,6 @@ if "initialized" not in st.session_state:
     st.session_state.current_user = ""
     st.session_state.needs_rerun = False
     st.session_state.last_claimed_input = ""
-    # Initialize flags for quick actions
     for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
         st.session_state[flag] = False
 
@@ -90,14 +89,14 @@ with cols[2]:
         st.rerun()
 
 with cols[3]:
-    # Text input for manager
-    name_input = st.text_input(
-        "Enter your name to manage the queue:",
-        key="manager_input",
-        label_visibility="collapsed",
-        placeholder="Type your name and press Enter or click Claim Queue"
-    )
-
+    claim_cols = st.columns([2,1])
+    with claim_cols[0]:
+        name_input = st.text_input(
+            "Enter your name to manage the queue:",
+            key="manager_input",
+            label_visibility="collapsed",
+            placeholder="Type your name"
+        )
     def claim_manager(name):
         if name:
             if st.session_state.get("current_manager") and st.session_state.current_manager != name:
@@ -108,10 +107,14 @@ with cols[3]:
             st.session_state.current_manager = name
             save_state()
             st.session_state.needs_rerun = True
-
-    st.button("🛠 Claim Queue", on_click=claim_manager, args=(name_input,), use_container_width=True)
-
-    # Enter key handling
+    with claim_cols[1]:
+        st.button(
+            "🛠 Claim Queue",
+            on_click=claim_manager,
+            args=(name_input,),
+            use_container_width=True
+        )
+    # Enter key handling (if you want immediate claim on typing "Enter")
     if name_input and name_input != st.session_state.last_claimed_input:
         claim_manager(name_input)
         st.session_state.last_claimed_input = name_input
