@@ -45,6 +45,13 @@ st.markdown(
     "For Epic Singing VC 2, use [this link](https://epic-queue-2.streamlit.app/)._"
 )
 
+# Display current manager
+if current_manager:
+    st.info(f"💡 Currently managing the queue: **{current_manager}**")
+else:
+    st.info("💡 No one is currently managing the queue. Press 'Manage Queue' to take control.")
+
+
 # Input box + Join button in same row
 def join_on_enter():
     name = st.session_state.name_input.strip()
@@ -290,6 +297,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
