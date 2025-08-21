@@ -89,8 +89,12 @@ with cols[3]:
     name_input = st.text_input(
         "Enter your name to manage the queue:",
         key="manager_input",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        placeholder="Type your name and press Enter or click Claim Queue"
     )
+
+    if "last_claimed_input" not in st.session_state:
+        st.session_state.last_claimed_input = ""
 
     def claim_manager(name):
         if name:
@@ -101,25 +105,31 @@ with cols[3]:
             st.session_state.current_user = name
             st.session_state.current_manager = name
 
-            # Save manager in the JSON
+            # Save manager in JSON
+            data = {}
             if os.path.exists(SAVE_FILE):
                 with open(SAVE_FILE, "r", encoding="utf-8") as f:
                     data = json.load(f)
-            else:
-                data = {}
             data["current_manager"] = name
             with open(SAVE_FILE, "w", encoding="utf-8") as f:
                 json.dump(data, f)
 
-            # Set rerun flag instead of calling directly
+            # Set rerun flag
             st.session_state.rerun_needed = True
 
+    # Button alternative
     st.button("🛠 Claim Queue", on_click=claim_manager, args=(name_input,), use_container_width=True)
+
+    # Enter key handling
+    if name_input and name_input != st.session_state.last_claimed_input:
+        claim_manager(name_input)
+        st.session_state.last_claimed_input = name_input
 
 # ---- End of script ----
 if st.session_state.get("rerun_needed"):
     st.session_state.rerun_needed = False
     st.experimental_rerun()
+
 
 
 
@@ -296,6 +306,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
