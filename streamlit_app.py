@@ -94,6 +94,9 @@ if manager_name and manager_name != st.session_state.last_claimed_input:
     st.session_state.last_claimed_input = manager_name
 
 # ---------------- Top button bar ----------------
+st.markdown("#### Main Actions")
+qa = st.columns(4)
+
 cols = st.columns(4)  # Advance, Clear, Refresh, Spacer
 
 with cols[0]:
@@ -285,3 +288,4 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
+
