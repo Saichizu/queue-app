@@ -117,6 +117,8 @@ if manager_name and manager_name != st.session_state.last_claimed_input:
     st.session_state.last_claimed_input = manager_name
 
 # ----------- Top button bar -----------
+st.markdown("#### Main Actions")
+qa = st.columns(4)
 cols = st.columns([1, 1, 1, 0.3, 1])
 with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
@@ -299,3 +301,4 @@ st.markdown("""
 
 # --- Credit at bottom ---
 st.markdown('<div style="text-align:center; font-size:11px; color:gray; margin-top:18px;">credit: Saichizu</div>', unsafe_allow_html=True)
+
