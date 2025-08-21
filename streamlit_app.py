@@ -29,9 +29,11 @@ def save_state():
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f)
 
-# ---------------- Init ----------------
+# --- FIX: Always load state at the top ---
+load_state()
+
+# Only set up session flags if not already done
 if "initialized" not in st.session_state:
-    load_state()
     st.session_state.rev = 0
     st.session_state.initialized = True
     st.session_state.current_user = ""
@@ -116,6 +118,7 @@ with cols[1]:
 
 with cols[2]:
     if st.button("🔄 Refresh", use_container_width=True):
+        # Just rerun; state is always loaded from file at the top
         st.session_state.rev += 1
         st.rerun()
 
