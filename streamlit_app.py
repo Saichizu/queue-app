@@ -72,15 +72,16 @@ with claim_cols[0]:
         placeholder="Type your name"
     )
 def claim_manager(name):
+    current_manager = st.session_state.get("current_manager", "")
     if name:
-        if st.session_state.get("current_manager") and st.session_state.current_manager != name:
-            st.warning(f"You are now replacing **{st.session_state.current_manager}** as manager.")
-        else:
-            st.success("You are now managing the queue.")
+        # Show warning if replacing someone else
+        if current_manager and current_manager != name:
+            st.warning(f"⚠️ You will REPLACE **{current_manager}** as manager if you continue!")
         st.session_state.current_user = name
         st.session_state.current_manager = name
         save_state()
         st.session_state.needs_rerun = True
+        st.success("You are now managing the queue.")
 with claim_cols[1]:
     if st.button("🛠 Claim Queue", use_container_width=True):
         if manager_name:
@@ -288,4 +289,5 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
+
 
