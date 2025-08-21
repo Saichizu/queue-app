@@ -67,21 +67,40 @@ with col1:
 with col2:
     st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
 
-# --- Top button bar ---
-cols = st.columns(4)  # add one more column for Refresh
+# ---------------- Manager State ----------------
+if "current_user" not in st.session_state:
+    st.session_state.current_user = ""
+
+# Load manager from JSON
+if os.path.exists(SAVE_FILE):
+    with open(SAVE_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+else:
+    data = {}
+
+current_manager = data.get("current_manager", "")
+
+# ---------------- Top button bar ----------------
+cols = st.columns(5)  # add one column for Manage Queue
 with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
-        if st.session_state.queue:
-            first = st.session_state.queue.pop(0)
-            st.session_state.queue.append(first)
-            bump_and_rerun()
+        if st.session_state.current_user == current_manager:
+            if st.session_state.queue:
+                first = st.session_state.queue.pop(0)
+                st.session_state.queue.append(first)
+                bump_and_rerun()
+        else:
+            st.warning("You are not managing the queue. Press 'Manage Queue' to claim control.")
 
 with cols[1]:
     if st.button("🧹 Clear All", use_container_width=True):
-        st.session_state.queue.clear()
-        st.session_state.calypso.clear()
-        st.session_state.pinged.clear()
-        bump_and_rerun()
+        if st.session_state.current_user == current_manager:
+            st.session_state.queue.clear()
+            st.session_state.calypso.clear()
+            st.session_state.pinged.clear()
+            bump_and_rerun()
+        else:
+            st.warning("You are not managing the queue. Press 'Manage Queue' to claim control.")
 
 with cols[2]:
     if st.button("🔄 Refresh", use_container_width=True):
@@ -89,7 +108,23 @@ with cols[2]:
         st.rerun()
 
 with cols[3]:
+    if st.button("🛠 Manage Queue", use_container_width=True):
+        name_input = st.text_input("Enter your name to manage the queue:", key="manager_input")
+        if name_input:
+            if current_manager:
+                st.warning(f"You are now replacing **{current_manager}** as manager.")
+            else:
+                st.success(f"You are now managing the queue.")
+            st.session_state.current_user = name_input
+            data["current_manager"] = name_input
+            with open(SAVE_FILE, "w", encoding="utf-8") as f:
+                json.dump(data, f)
+            current_manager = name_input
+            st.experimental_rerun()
+
+with cols[4]:
     st.write(" ")  # spacer
+
 
 
 # ---- Quick Actions (tight 2-column layout) ----
@@ -255,6 +290,7 @@ save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
+
 
 
 
