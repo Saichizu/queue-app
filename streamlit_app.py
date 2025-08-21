@@ -285,6 +285,8 @@ if st.session_state.queue:
         else:
             output += "- None\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\nReact to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "The Wheel of The Gods: https://wheelofnames.com/mer-8nr\n"
         st.code(output, language="text")
 
 save_state()
@@ -310,6 +312,7 @@ st.markdown("""
 
 # --- Credit at bottom ---
 st.markdown('<div style="text-align:center; font-size:11px; color:gray; margin-top:18px;">credit: Saichizu</div>', unsafe_allow_html=True)
+
 
 
 
