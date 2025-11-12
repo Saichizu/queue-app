@@ -178,73 +178,6 @@ with join_cols[0]:
 with join_cols[1]:
     st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
 
-# ----------- Quick Actions (Leave, Hold, Return, Ping) -----------
-st.markdown("#### Quick Actions")
-qa = st.columns(4)
-
-def render_names(names, action_key):
-    cols = st.columns(2, gap="small")
-    for i, person in enumerate(names):
-        col = cols[i % 2]
-        with col:
-            st.markdown('<div class="name-btn">', unsafe_allow_html=True)
-            if st.button(person, key=f"{action_key}_{i}", use_container_width=True):
-                return person
-            st.markdown('</div>', unsafe_allow_html=True)
-    return None
-
-if st.session_state.current_user == st.session_state.current_manager:
-    with qa[0]:
-        if st.button("➖ Leave", use_container_width=True):
-            st.session_state.show_leave = not st.session_state.show_leave
-            for flag in ["show_hold", "show_return", "show_ping"]:
-                st.session_state[flag] = False
-        if st.session_state.show_leave:
-            person = render_names(st.session_state.queue, "Leave")
-            if person:
-                st.session_state.queue.remove(person)
-                st.session_state.pinged.discard(person)
-                bump_and_rerun()
-    with qa[1]:
-        if st.button("⏳ Hold", use_container_width=True):
-            st.session_state.show_hold = not st.session_state.show_hold
-            for flag in ["show_leave", "show_return", "show_ping"]:
-                st.session_state[flag] = False
-        if st.session_state.show_hold:
-            person = render_names(st.session_state.queue, "Hold")
-            if person:
-                st.session_state.queue.remove(person)
-                st.session_state.calypso.append(person)
-                bump_and_rerun()
-    with qa[2]:
-        if st.button("🏝️ Return", use_container_width=True):
-            st.session_state.show_return = not st.session_state.show_return
-            for flag in ["show_leave", "show_hold", "show_ping"]:
-                st.session_state[flag] = False
-        if st.session_state.show_return:
-            person = render_names(st.session_state.calypso, "↩️")
-            if person:
-                st.session_state.calypso.remove(person)
-                st.session_state.queue.append(person)
-                bump_and_rerun()
-    with qa[3]:
-        if st.button("📣 Ping/Unping", use_container_width=True):
-            st.session_state.show_ping = not st.session_state.show_ping
-            for flag in ["show_leave", "show_hold", "show_return"]:
-                st.session_state[flag] = False
-        if st.session_state.show_ping:
-            names = st.session_state.queue + st.session_state.calypso
-            person = render_names(names, "📣")
-            if person:
-                if person in st.session_state.pinged:
-                    st.session_state.pinged.remove(person)
-                else:
-                    st.session_state.pinged.add(person)
-                bump_and_rerun()
-else:
-    st.info("⚠️ You are not managing the queue. Press 'Manage Queue' to interact with it.")
-
-# ----------- Layout: Reorder + Output -----------
 if st.session_state.queue:
     st.markdown("### Queue Manager")
     left, right = st.columns([1, 2])
@@ -269,48 +202,41 @@ if st.session_state.queue:
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
 
-        # split the display area into two columns
+        # Two columns for text-based display
         col1, col2 = st.columns(2)
 
-        # LEFT COLUMN — Main Queue
+        # LEFT COLUMN — MAIN QUEUE
         with col1:
-            st.markdown("### 🎶 Main Queue")
-            st.write(f"**Managed by:** {st.session_state.current_manager if st.session_state.current_manager else '-'}")
-            st.divider()
-
-            st.markdown("#### 👑 Currently Singing")
-            st.write(fmt_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else "-")
-
-            st.markdown("#### ⏭️ Next Up")
-            st.write(fmt_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-")
-
-            st.markdown("#### 🛶 On Queue")
+            output_left = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
+            output_left += "<https://epic-queue.streamlit.app/>\n"
+            output_left += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
+            output_left += "━━━━━━━━━━━━━━━━━━━━━\n"
+            output_left += f"🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else '-'}\n"
+            output_left += "━━━━━━━━━━━━━━━━━━━━━\n"
+            output_left += f"⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n🌟 {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else '-'}\n"
+            output_left += "━━━━━━━━━━━━━━━━━━━━━\n🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
             if len(st.session_state.queue) > 2:
                 for person in st.session_state.queue[2:]:
-                    st.write(f"🎭 {fmt_name(person)}")
+                    output_left += f"🎭 {fmt_name(person)}\n"
             else:
-                st.write("- None")
+                output_left += "- None\n"
+            output_left += "━━━━━━━━━━━━━━━━━━━━━\n"
+            st.code(output_left, language="text")
 
-        # RIGHT COLUMN — Away with Calypso
+        # RIGHT COLUMN — AWAY WITH CALYPSO
         with col2:
-            st.markdown("### 🏝️ Away with Calypso")
+            output_right = "🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
             if st.session_state.calypso:
                 for person in st.session_state.calypso:
-                    st.write(f"🌴 {fmt_name(person)}")
+                    output_right += f"🌴 {fmt_name(person)}\n"
             else:
-                st.write("- None")
+                output_right += "- None\n"
+            output_right += "━━━━━━━━━━━━━━━━━━━━━\n"
+            output_right += "React to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
+            output_right += "━━━━━━━━━━━━━━━━━━━━━\n"
+            output_right += "The Wheel of The Gods:\n<https://wheelofnames.com/mer-8nr>\n"
+            st.code(output_right, language="text")
 
-        # footer info (optional)
-        st.divider()
-        st.markdown("""
-        **React to join the legend:**
-        🎤 — Join the Queue  
-        🚪 — Leave the Queue  
-        📣 — Summon the Bard (Ping)  
-        ⏳ — Place Me On Hold  
-
-        [🎡 The Wheel of The Gods](https://wheelofnames.com/mer-8nr)
-        """)
 
 save_state()
 if st.session_state.get("needs_rerun"):
@@ -335,6 +261,7 @@ st.markdown("""
 
 # --- Credit at bottom ---
 st.markdown('<div style="text-align:center; font-size:11px; color:gray; margin-top:18px;">credit: Saichizu</div>', unsafe_allow_html=True)
+
 
 
 
