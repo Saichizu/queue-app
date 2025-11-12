@@ -248,6 +248,7 @@ else:
 if st.session_state.queue:
     st.markdown("### Queue Manager")
     left, right = st.columns([1, 2])
+
     with left:
         st.markdown("#### 🔀 Reorder")
         if st.session_state.current_user == st.session_state.current_manager:
@@ -263,32 +264,53 @@ if st.session_state.queue:
                 st.rerun()
         else:
             st.info("🔹 Only the manager can reorder the queue.")
+
     with right:
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
-        output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
-        output += "<https://epic-queue.streamlit.app/>\n"
-        output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
-        output += f"🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue)>=1 else '-'}\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
-        output += f"⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n🌟 {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue)>=2 else '-'}\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
-        if len(st.session_state.queue) > 2:
-            for person in st.session_state.queue[2:]:
-                output += f"🎭 {fmt_name(person)}\n"
-        else:
-            output += "- None\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
-        if st.session_state.calypso:
-            for person in st.session_state.calypso:
-                output += f"🌴 {fmt_name(person)}\n"
-        else:
-            output += "- None\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\nReact to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
-        output += "The Wheel of The Gods: <https://wheelofnames.com/mer-8nr>\n"
-        st.code(output, language="text")
+
+        # split the display area into two columns
+        col1, col2 = st.columns(2)
+
+        # LEFT COLUMN — Main Queue
+        with col1:
+            st.markdown("### 🎶 Main Queue")
+            st.write(f"**Managed by:** {st.session_state.current_manager if st.session_state.current_manager else '-'}")
+            st.divider()
+
+            st.markdown("#### 👑 Currently Singing")
+            st.write(fmt_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else "-")
+
+            st.markdown("#### ⏭️ Next Up")
+            st.write(fmt_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-")
+
+            st.markdown("#### 🛶 On Queue")
+            if len(st.session_state.queue) > 2:
+                for person in st.session_state.queue[2:]:
+                    st.write(f"🎭 {fmt_name(person)}")
+            else:
+                st.write("- None")
+
+        # RIGHT COLUMN — Away with Calypso
+        with col2:
+            st.markdown("### 🏝️ Away with Calypso")
+            if st.session_state.calypso:
+                for person in st.session_state.calypso:
+                    st.write(f"🌴 {fmt_name(person)}")
+            else:
+                st.write("- None")
+
+        # footer info (optional)
+        st.divider()
+        st.markdown("""
+        **React to join the legend:**
+        🎤 — Join the Queue  
+        🚪 — Leave the Queue  
+        📣 — Summon the Bard (Ping)  
+        ⏳ — Place Me On Hold  
+
+        [🎡 The Wheel of The Gods](https://wheelofnames.com/mer-8nr)
+        """)
 
 save_state()
 if st.session_state.get("needs_rerun"):
@@ -313,6 +335,7 @@ st.markdown("""
 
 # --- Credit at bottom ---
 st.markdown('<div style="text-align:center; font-size:11px; color:gray; margin-top:18px;">credit: Saichizu</div>', unsafe_allow_html=True)
+
 
 
 
