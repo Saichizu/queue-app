@@ -1,9 +1,12 @@
 import streamlit as st
 import streamlit_sortables as sortables
-import json, os
+import json, os, io, base64
+from PIL import Image, ImageDraw, ImageFont
+from streamlit_autorefresh import st_autorefresh
 
 SAVE_FILE = "queue.json"
 
+# --- Load & Save State ---
 def load_state():
     if os.path.exists(SAVE_FILE):
         with open(SAVE_FILE, "r", encoding="utf-8") as f:
@@ -28,7 +31,7 @@ def save_state():
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f)
 
-# --- Always load state at the top ---
+# --- Always load state ---
 load_state()
 
 if "initialized" not in st.session_state:
@@ -42,7 +45,6 @@ if "initialized" not in st.session_state:
     for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
         st.session_state[flag] = False
 
-from streamlit_autorefresh import st_autorefresh
 if st.session_state.current_user != st.session_state.current_manager:
     st_autorefresh(interval=3000)
 
@@ -52,6 +54,7 @@ def bump_and_rerun():
     st.session_state.needs_rerun = True
     st.rerun()
 
+# --- UI Start ---
 st.title("⚔️EPIC Singing VC 1 Queue🎭")
 st.markdown(
     "_Use this only for **Epic Singing VC 1** because changes are saved. "
@@ -86,7 +89,6 @@ def handle_claim_request(name):
     current_manager = st.session_state.get("current_manager", "")
     if name:
         if current_manager and current_manager != name:
-            # Prompt for confirmation
             st.session_state.show_manager_confirm = True
             st.session_state.manager_candidate = name
         else:
@@ -108,7 +110,6 @@ with claim_cols[2]:
             st.success("You have released manage rights.")
             st.rerun()
 
-# Prompt for manager replacement
 if st.session_state.show_manager_confirm:
     st.warning(f"⚠️ You will REPLACE **{st.session_state.current_manager}** as manager. Are you sure?")
     col_yes, col_no = st.columns(2)
@@ -120,14 +121,12 @@ if st.session_state.show_manager_confirm:
             st.session_state.show_manager_confirm = False
             st.session_state.manager_candidate = ""
 
-# Enter key handling for manager name input
 if manager_name and manager_name != st.session_state.last_claimed_input:
     handle_claim_request(manager_name)
     st.session_state.last_claimed_input = manager_name
 
-# ----------- Top button bar -----------
+# ----------- Main Actions -----------
 st.markdown("#### Main Actions")
-qa = st.columns(4)
 cols = st.columns([1, 1, 1, 0.3, 1])
 with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
@@ -151,12 +150,8 @@ with cols[2]:
     if st.button("🔄 Refresh", use_container_width=True):
         st.session_state.rev += 1
         st.rerun()
-with cols[3]:
-    st.write("")  # spacer
-with cols[4]:
-    st.write("")  # extra spacer for layout
 
-# ----------- Input to join (side by side, with placeholder) -----------
+# ----------- Input to join -----------
 def join_on_enter():
     name = st.session_state.get("name_input", "").strip()
     if name and name not in st.session_state.queue and name not in st.session_state.calypso:
@@ -178,6 +173,7 @@ with join_cols[0]:
 with join_cols[1]:
     st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
 
+# ----------- Queue Display -----------
 if st.session_state.queue:
     st.markdown("### Queue Manager")
     left, right = st.columns([1, 2])
@@ -202,57 +198,91 @@ if st.session_state.queue:
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
 
-        # helper to print items in 2 columns
-        def two_columns(items, prefix="🎭", width=20):
-            lines = []
-            for i in range(0, len(items), 2):
-                left = f"{prefix} {fmt_name(items[i])}" if i < len(items) else ""
-                right = f"{prefix} {fmt_name(items[i+1])}" if i+1 < len(items) else ""
-                lines.append(f"{left:<{width}}{right}")
-            return "\n".join(lines)
-
         output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
-        output += "https://epic-queue.streamlit.app/\n"
+        output += "<https://epic-queue.streamlit.app/>\n"
         output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\n"
-
-        # singing and next up (side by side)
-        singing = fmt_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else "-"
-        next_up = fmt_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-"
-        output += f"𝑺𝑰𝑵𝑮𝑰𝑵𝑮{' ' * 16}⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n"
-        output += f"👑 {singing:<15}🌟 {next_up}\n"
+        output += f"🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue)>=1 else '-'}\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\n"
-
-        # queue list (two per line)
-        output += "🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
+        output += f"⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n🌟 {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue)>=2 else '-'}\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
         if len(st.session_state.queue) > 2:
-            on_queue = st.session_state.queue[2:]
-            output += two_columns(on_queue) + "\n"
+            for person in st.session_state.queue[2:]:
+                output += f"🎭 {fmt_name(person)}\n"
         else:
             output += "- None\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
-
-        # calypso list (two per line)
-        output += "🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
         if st.session_state.calypso:
-            output += two_columns(st.session_state.calypso, prefix="🌴") + "\n"
+            for person in st.session_state.calypso:
+                output += f"🌴 {fmt_name(person)}\n"
         else:
             output += "- None\n"
-
+        output += "━━━━━━━━━━━━━━━━━━━━━\nReact to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\n"
-        output += "React to join the legend:\n"
-        output += "🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
-
+        output += "The Wheel of The Gods: <https://wheelofnames.com/mer-8nr>\n"
         st.code(output, language="text")
 
+        # --- Snapshot Queue as PNG + Copy ---
+        if st.button("📸 Snapshot Queue (PNG)", use_container_width=True):
+            text = output
+            lines = text.splitlines()
 
+            # Font
+            try:
+                font = ImageFont.truetype("DejaVuSansMono.ttf", 18)
+            except:
+                font = ImageFont.load_default()
+
+            max_width = max(font.getlength(line) for line in lines)
+            line_height = font.getbbox("A")[3] - font.getbbox("A")[1]
+            padding = 20
+            img_height = line_height * len(lines) + padding * 2
+            img_width = int(max_width) + padding * 2
+
+            img = Image.new("RGB", (img_width, img_height), color=(18, 18, 18))
+            draw = ImageDraw.Draw(img)
+            y = padding
+            for line in lines:
+                draw.text((padding, y), line, font=font, fill=(255, 255, 255))
+                y += line_height
+
+            buf = io.BytesIO()
+            img.save(buf, format="PNG")
+            buf.seek(0)
+
+            st.image(buf, caption="Queue Snapshot", use_container_width=True)
+            st.download_button(
+                "💾 Download PNG",
+                data=buf,
+                file_name="queue_snapshot.png",
+                mime="image/png",
+            )
+
+            # Auto-copy to clipboard (client side JS)
+            img_base64 = base64.b64encode(buf.getvalue()).decode()
+            js = f"""
+            <script>
+            async function copyImage() {{
+                const response = await fetch("data:image/png;base64,{img_base64}");
+                const blob = await response.blob();
+                try {{
+                    await navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]);
+                    alert("✅ Image copied to clipboard! You can paste it in WhatsApp or Discord.");
+                }} catch (err) {{
+                    alert("⚠️ Copy to clipboard not supported in this browser.");
+                }}
+            }}
+            copyImage();
+            </script>
+            """
+            st.components.v1.html(js, height=0)
 
 save_state()
 if st.session_state.get("needs_rerun"):
     st.session_state.needs_rerun = False
     st.rerun()
 
+# --- Custom Styling ---
 st.markdown("""
     <style>
     .name-btn button {
@@ -269,18 +299,5 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- Credit at bottom ---
+# --- Credit ---
 st.markdown('<div style="text-align:center; font-size:11px; color:gray; margin-top:18px;">credit: Saichizu</div>', unsafe_allow_html=True)
-
-
-
-
-
-
-
-
-
-
-
-
-
