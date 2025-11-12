@@ -202,40 +202,50 @@ if st.session_state.queue:
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
 
-        # Two columns for text-based display
-        col1, col2 = st.columns(2)
+        # helper to print items in 2 columns
+        def two_columns(items, prefix="🎭", width=20):
+            lines = []
+            for i in range(0, len(items), 2):
+                left = f"{prefix} {fmt_name(items[i])}" if i < len(items) else ""
+                right = f"{prefix} {fmt_name(items[i+1])}" if i+1 < len(items) else ""
+                lines.append(f"{left:<{width}}{right}")
+            return "\n".join(lines)
 
-        # LEFT COLUMN — MAIN QUEUE
-        with col1:
-            output_left = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
-            output_left += "<https://epic-queue.streamlit.app/>\n"
-            output_left += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
-            output_left += "━━━━━━━━━━━━━━━━━━━━━\n"
-            output_left += f"🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else '-'}\n"
-            output_left += "━━━━━━━━━━━━━━━━━━━━━\n"
-            output_left += f"⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n🌟 {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else '-'}\n"
-            output_left += "━━━━━━━━━━━━━━━━━━━━━\n🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
-            if len(st.session_state.queue) > 2:
-                for person in st.session_state.queue[2:]:
-                    output_left += f"🎭 {fmt_name(person)}\n"
-            else:
-                output_left += "- None\n"
-            output_left += "━━━━━━━━━━━━━━━━━━━━━\n"
-            st.code(output_left, language="text")
+        output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
+        output += "https://epic-queue.streamlit.app/\n"
+        output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
 
-        # RIGHT COLUMN — AWAY WITH CALYPSO
-        with col2:
-            output_right = "🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
-            if st.session_state.calypso:
-                for person in st.session_state.calypso:
-                    output_right += f"🌴 {fmt_name(person)}\n"
-            else:
-                output_right += "- None\n"
-            output_right += "━━━━━━━━━━━━━━━━━━━━━\n"
-            output_right += "React to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
-            output_right += "━━━━━━━━━━━━━━━━━━━━━\n"
-            output_right += "The Wheel of The Gods:\n<https://wheelofnames.com/mer-8nr>\n"
-            st.code(output_right, language="text")
+        # singing and next up (side by side)
+        singing = fmt_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else "-"
+        next_up = fmt_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-"
+        output += f"𝑺𝑰𝑵𝑮𝑰𝑵𝑮{' ' * 16}⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n"
+        output += f"👑 {singing:<15}🌟 {next_up}\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+
+        # queue list (two per line)
+        output += "🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
+        if len(st.session_state.queue) > 2:
+            on_queue = st.session_state.queue[2:]
+            output += two_columns(on_queue) + "\n"
+        else:
+            output += "- None\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+
+        # calypso list (two per line)
+        output += "🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
+        if st.session_state.calypso:
+            output += two_columns(st.session_state.calypso, prefix="🌴") + "\n"
+        else:
+            output += "- None\n"
+
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "React to join the legend:\n"
+        output += "🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
+        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+
+        st.code(output, language="text")
+
 
 
 save_state()
@@ -261,6 +271,7 @@ st.markdown("""
 
 # --- Credit at bottom ---
 st.markdown('<div style="text-align:center; font-size:11px; color:gray; margin-top:18px;">credit: Saichizu</div>', unsafe_allow_html=True)
+
 
 
 
