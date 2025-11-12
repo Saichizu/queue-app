@@ -6,7 +6,6 @@ from streamlit_autorefresh import st_autorefresh
 
 SAVE_FILE = "queue.json"
 
-# --- Load & Save State ---
 def load_state():
     if os.path.exists(SAVE_FILE):
         with open(SAVE_FILE, "r", encoding="utf-8") as f:
@@ -31,10 +30,9 @@ def save_state():
     with open(SAVE_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f)
 
-# --- Always load state ---
+# --- Always load state at the top ---
 load_state()
 
-# --- Initialize session state flags ---
 if "initialized" not in st.session_state:
     st.session_state.rev = 0
     st.session_state.initialized = True
@@ -46,7 +44,7 @@ if "initialized" not in st.session_state:
     for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
         st.session_state[flag] = False
 
-# auto refresh for non-manager viewers
+from streamlit_autorefresh import st_autorefresh
 if st.session_state.current_user != st.session_state.current_manager:
     st_autorefresh(interval=3000)
 
@@ -56,55 +54,6 @@ def bump_and_rerun():
     st.session_state.needs_rerun = True
     st.rerun()
 
-# --- Helper actions for users ---
-def leave_queue(name):
-    changed = False
-    if name in st.session_state.queue:
-        st.session_state.queue.remove(name)
-        changed = True
-    if name in st.session_state.calypso:
-        st.session_state.calypso.remove(name)
-        changed = True
-    if name in st.session_state.pinged:
-        st.session_state.pinged.discard(name)
-    if changed:
-        save_state()
-        st.success(f"Removed {name} from queue.")
-        bump_and_rerun()
-
-def place_on_hold(name):
-    if name in st.session_state.queue:
-        st.session_state.queue.remove(name)
-        st.session_state.calypso.append(name)
-        save_state()
-        st.success(f"{name} placed on hold.")
-        bump_and_rerun()
-    else:
-        st.warning("You must be in the queue to place on hold.")
-
-def return_from_hold(name):
-    if name in st.session_state.calypso:
-        st.session_state.calypso.remove(name)
-        st.session_state.queue.append(name)
-        save_state()
-        st.success(f"{name} returned to the queue.")
-        bump_and_rerun()
-    else:
-        st.warning("You are not on hold.")
-
-def toggle_ping(name):
-    if name in st.session_state.pinged:
-        st.session_state.pinged.discard(name)
-        save_state()
-        st.info(f"Unpinged {name}.")
-    else:
-        st.session_state.pinged.add(name)
-        save_state()
-        st.info(f"Pinged {name}.")
-    st.session_state.rev += 1
-    st.rerun()
-
-# --- UI Start ---
 st.title("⚔️EPIC Singing VC 1 Queue🎭")
 st.markdown(
     "_Use this only for **Epic Singing VC 1** because changes are saved. "
@@ -116,7 +65,7 @@ if st.session_state.current_manager:
 else:
     st.info("💡 No one is currently managing the queue. Press 'Manage Queue' to take control.")
 
-# ----------- Manager Claim -----------
+# ----------- Manager Name Input & Claim Button -----------
 claim_cols = st.columns([4, 1, 1])
 with claim_cols[0]:
     manager_name = st.text_input(
@@ -139,6 +88,7 @@ def handle_claim_request(name):
     current_manager = st.session_state.get("current_manager", "")
     if name:
         if current_manager and current_manager != name:
+            # Prompt for confirmation
             st.session_state.show_manager_confirm = True
             st.session_state.manager_candidate = name
         else:
@@ -160,7 +110,7 @@ with claim_cols[2]:
             st.success("You have released manage rights.")
             st.rerun()
 
-# Manager-confirm prompt
+# Prompt for manager replacement
 if st.session_state.show_manager_confirm:
     st.warning(f"⚠️ You will REPLACE **{st.session_state.current_manager}** as manager. Are you sure?")
     col_yes, col_no = st.columns(2)
@@ -172,13 +122,14 @@ if st.session_state.show_manager_confirm:
             st.session_state.show_manager_confirm = False
             st.session_state.manager_candidate = ""
 
-# Accept enter on manager input
+# Enter key handling for manager name input
 if manager_name and manager_name != st.session_state.last_claimed_input:
     handle_claim_request(manager_name)
     st.session_state.last_claimed_input = manager_name
 
-# ----------- Main Actions (manager) -----------
+# ----------- Top button bar -----------
 st.markdown("#### Main Actions")
+qa = st.columns(4)
 cols = st.columns([1, 1, 1, 0.3, 1])
 with cols[0]:
     if st.button("⏩ Advance", use_container_width=True):
@@ -205,9 +156,9 @@ with cols[2]:
 with cols[3]:
     st.write("")  # spacer
 with cols[4]:
-    st.write("")  # spacer
+    st.write("")  # extra spacer for layout
 
-# ----------- Join input -----------
+# ----------- Input to join (side by side, with placeholder) -----------
 def join_on_enter():
     name = st.session_state.get("name_input", "").strip()
     if name and name not in st.session_state.queue and name not in st.session_state.calypso:
@@ -219,35 +170,86 @@ def join_on_enter():
 
 join_cols = st.columns([4, 1])
 with join_cols[0]:
-    st.text_input("", key="name_input", on_change=join_on_enter, label_visibility="collapsed", placeholder="Add People")
+    st.text_input(
+        "",
+        key="name_input",
+        on_change=join_on_enter,
+        label_visibility="collapsed",
+        placeholder="Add People"
+    )
 with join_cols[1]:
     st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
 
-# ----------- Current user controls (Leave / Hold / Return / Ping) -----------
-st.markdown("#### Your Controls")
-if st.session_state.current_user:
-    cu = st.session_state.current_user
-    ctl_cols = st.columns([1,1,1,1])
-    with ctl_cols[0]:
-        if st.button("🚪 Leave Queue", use_container_width=True):
-            leave_queue(cu)
-    with ctl_cols[1]:
-        if st.button("⏳ Place Me On Hold", use_container_width=True):
-            place_on_hold(cu)
-    with ctl_cols[2]:
-        if st.button("↩️ Return From Hold", use_container_width=True):
-            return_from_hold(cu)
-    with ctl_cols[3]:
-        if st.button("📣 Toggle Ping", use_container_width=True):
-            toggle_ping(cu)
-else:
-    st.info("Type your name in 'Manage Queue' to enable personal controls (these actions affect your name).")
+# ----------- Quick Actions (Leave, Hold, Return, Ping) -----------
+st.markdown("#### Quick Actions")
+qa = st.columns(4)
 
-# ----------- Queue Display -----------
+def render_names(names, action_key):
+    cols = st.columns(2, gap="small")
+    for i, person in enumerate(names):
+        col = cols[i % 2]
+        with col:
+            st.markdown('<div class="name-btn">', unsafe_allow_html=True)
+            if st.button(person, key=f"{action_key}_{i}", use_container_width=True):
+                return person
+            st.markdown('</div>', unsafe_allow_html=True)
+    return None
+
+if st.session_state.current_user == st.session_state.current_manager:
+    with qa[0]:
+        if st.button("➖ Leave", use_container_width=True):
+            st.session_state.show_leave = not st.session_state.show_leave
+            for flag in ["show_hold", "show_return", "show_ping"]:
+                st.session_state[flag] = False
+        if st.session_state.show_leave:
+            person = render_names(st.session_state.queue, "Leave")
+            if person:
+                st.session_state.queue.remove(person)
+                st.session_state.pinged.discard(person)
+                bump_and_rerun()
+    with qa[1]:
+        if st.button("⏳ Hold", use_container_width=True):
+            st.session_state.show_hold = not st.session_state.show_hold
+            for flag in ["show_leave", "show_return", "show_ping"]:
+                st.session_state[flag] = False
+        if st.session_state.show_hold:
+            person = render_names(st.session_state.queue, "Hold")
+            if person:
+                st.session_state.queue.remove(person)
+                st.session_state.calypso.append(person)
+                bump_and_rerun()
+    with qa[2]:
+        if st.button("🏝️ Return", use_container_width=True):
+            st.session_state.show_return = not st.session_state.show_return
+            for flag in ["show_leave", "show_hold", "show_ping"]:
+                st.session_state[flag] = False
+        if st.session_state.show_return:
+            person = render_names(st.session_state.calypso, "↩️")
+            if person:
+                st.session_state.calypso.remove(person)
+                st.session_state.queue.append(person)
+                bump_and_rerun()
+    with qa[3]:
+        if st.button("📣 Ping/Unping", use_container_width=True):
+            st.session_state.show_ping = not st.session_state.show_ping
+            for flag in ["show_leave", "show_hold", "show_return"]:
+                st.session_state[flag] = False
+        if st.session_state.show_ping:
+            names = st.session_state.queue + st.session_state.calypso
+            person = render_names(names, "📣")
+            if person:
+                if person in st.session_state.pinged:
+                    st.session_state.pinged.remove(person)
+                else:
+                    st.session_state.pinged.add(person)
+                bump_and_rerun()
+else:
+    st.info("⚠️ You are not managing the queue. Press 'Manage Queue' to interact with it.")
+
+# ----------- Layout: Reorder + Output -----------
 if st.session_state.queue:
     st.markdown("### Queue Manager")
     left, right = st.columns([1, 2])
-
     with left:
         st.markdown("#### 🔀 Reorder")
         if st.session_state.current_user == st.session_state.current_manager:
@@ -263,12 +265,9 @@ if st.session_state.queue:
                 st.rerun()
         else:
             st.info("🔹 Only the manager can reorder the queue.")
-
     with right:
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
-
-        # --- TEXT BASED QUEUE (Single Column) ---
         output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
         output += "<https://epic-queue.streamlit.app/>\n"
         output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
@@ -291,7 +290,6 @@ if st.session_state.queue:
         output += "━━━━━━━━━━━━━━━━━━━━━\nReact to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\n"
         output += "The Wheel of The Gods: <https://wheelofnames.com/mer-8nr>\n"
-
         st.code(output, language="text")
 
 
@@ -394,6 +392,7 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
