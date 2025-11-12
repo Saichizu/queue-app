@@ -382,6 +382,7 @@ if st.session_state.queue:
         st.markdown(card_html, unsafe_allow_html=True)
 
 
+
 # Save & auto-rerun management
 save_state()
 if st.session_state.get("needs_rerun"):
@@ -404,4 +405,5 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
+
 
