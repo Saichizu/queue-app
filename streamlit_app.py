@@ -251,7 +251,11 @@ if st.session_state.queue:
     with left:
         st.markdown("#### 🔀 Reorder")
         if st.session_state.current_user == st.session_state.current_manager:
-            reordered = sortables.sort_items(st.session_state.queue, direction="vertical", key=f"sortable_{st.session_state.rev}")
+            reordered = sortables.sort_items(
+                st.session_state.queue,
+                direction="vertical",
+                key=f"sortable_{st.session_state.rev}"
+            )
             if reordered != st.session_state.queue:
                 st.session_state.queue = reordered
                 save_state()
@@ -264,7 +268,7 @@ if st.session_state.queue:
         def fmt_name(name):
             return f"{name} 📣" if name in st.session_state.pinged else name
 
-        # Build text output (the original "text" queue)
+        # --- TEXT BASED QUEUE (Single Column) ---
         output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
         output += "<https://epic-queue.streamlit.app/>\n"
         output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
@@ -290,64 +294,7 @@ if st.session_state.queue:
 
         st.code(output, language="text")
 
-        # --- Snapshot Queue as PNG + Auto-copy to clipboard ---
-        if st.button("📸 Snapshot Queue (PNG)", use_container_width=True):
-            text = output
-            lines = text.splitlines()
-
-            # Font: prefer DejaVuSansMono if present for consistent monospace
-            try:
-                font = ImageFont.truetype("DejaVuSansMono.ttf", 18)
-            except:
-                font = ImageFont.load_default()
-
-            # compute image size
-            max_width = max(font.getlength(line) for line in lines)
-            line_height = font.getbbox("A")[3] - font.getbbox("A")[1]
-            padding = 20
-            img_height = line_height * len(lines) + padding * 2
-            img_width = int(max_width) + padding * 2
-
-            # render image
-            img = Image.new("RGB", (img_width, img_height), color=(18, 18, 18))
-            draw = ImageDraw.Draw(img)
-            y = padding
-            for line in lines:
-                draw.text((padding, y), line, font=font, fill=(255, 255, 255))
-                y += line_height
-
-            buf = io.BytesIO()
-            img.save(buf, format="PNG")
-            buf.seek(0)
-
-            st.image(buf, caption="Queue Snapshot", use_container_width=True)
-            st.download_button(
-                "💾 Download PNG",
-                data=buf,
-                file_name="queue_snapshot.png",
-                mime="image/png",
-            )
-
-            # Auto-copy to clipboard (client side JS)
-            img_base64 = base64.b64encode(buf.getvalue()).decode()
-            js = f"""
-            <script>
-            async function copyImage() {{
-                try {{
-                    const response = await fetch("data:image/png;base64,{img_base64}");
-                    const blob = await response.blob();
-                    await navigator.clipboard.write([new ClipboardItem({{'image/png': blob}})]);
-                    alert("✅ Image copied to clipboard! You can paste it in WhatsApp or Discord.");
-                }} catch (err) {{
-                    alert("⚠️ Copy to clipboard not supported in this browser or permission denied.");
-                }}
-            }}
-            copyImage();
-            </script>
-            """
-            st.components.v1.html(js, height=0)
-
-# ----------- ✨ Compact Queue Card (beautiful screenshot card) -----------
+# ----------- ✨ Compact Queue Card (Beautiful Screenshot Card) -----------
 if st.session_state.queue:
     with st.container():
         st.markdown("""
@@ -370,7 +317,6 @@ if st.session_state.queue:
         .qc-managed { font-size:12px; opacity:0.8; }
         .qc-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px; }
         .qc-box { background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:10px; padding:10px; min-height:56px; display:flex; flex-direction:column; justify-content:center; }
-        .now { border: 1px solid rgba(255,255,255,0.08); padding:12px; border-radius:12px; display:flex; flex-direction:column; gap:6px; background: linear-gradient(90deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); }
         .label { font-size:11px; color:#d7cfff; opacity:0.95; font-weight:700; }
         .who { font-size:16px; font-weight:700; }
         .badges { display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
@@ -389,7 +335,6 @@ if st.session_state.queue:
         now_name = fmt_card_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else "-"
         next_name = fmt_card_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-"
 
-        # Build small HTML card
         queue_items_html = ""
         if len(st.session_state.queue) > 2:
             for n in st.session_state.queue[2:]:
@@ -433,7 +378,9 @@ if st.session_state.queue:
             <div class="foot">Share this card by screenshot — the text queue above remains for copy/paste.</div>
         </div>
         """
+
         st.markdown(card_html, unsafe_allow_html=True)
+
 
 # Save & auto-rerun management
 save_state()
@@ -457,3 +404,4 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
+
