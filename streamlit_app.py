@@ -289,7 +289,7 @@ if st.session_state.queue:
             output += "- None\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\nReact to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
         output += "━━━━━━━━━━━━━━━━━━━━━\n"
-        output += "The Wheel of The Gods: <https://wheelofnames.com/mer-8nr>\n"
+        output += "https://wheelofnames.com/jr7-eaa>\n"
         st.code(output, language="text")
 
 
@@ -392,6 +392,7 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 
