@@ -329,7 +329,7 @@ if st.session_state.queue:
     next_name = fmt_card_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-"
 
     queue_items_html = "".join(
-        f'<div class="badge">:lollipop: {fmt_card_name(n)}</div>' for n in st.session_state.queue[2:]
+        f'<div class="badge">🎭 {fmt_card_name(n)}</div>' for n in st.session_state.queue[2:]
     ) if len(st.session_state.queue) > 2 else '<div class="badge">—</div>'
 
     calypso_items_html = "".join(
