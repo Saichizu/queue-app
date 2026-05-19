@@ -271,24 +271,24 @@ if st.session_state.queue:
         output = "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭\n"
         output += "<https://epic-queue.streamlit.app/>\n"
         output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "-# ------------------\n"
         output += f"🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue)>=1 else '-'}\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "-# ------------------\n"
         output += f"⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n🌟 {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue)>=2 else '-'}\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
+        output += "-# ------------------\n🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
         if len(st.session_state.queue) > 2:
             for person in st.session_state.queue[2:]:
                 output += f"🎭 {fmt_name(person)}\n"
         else:
             output += "- None\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
+        output += "-# ------------------\n🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
         if st.session_state.calypso:
             for person in st.session_state.calypso:
                 output += f"🌴 {fmt_name(person)}\n"
         else:
             output += "- None\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\nReact to join the legend:\n🎤 — Join the Queue\n🚪 — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
-        output += "━━━━━━━━━━━━━━━━━━━━━\n"
+        output += "-# ------------------\nReact to join the legend:\n:cheese: — Join the Queue\n:mouse_trap: — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold\n"
+        output += "-# ------------------\n"
         output += "<https://wheelofnames.com/jr7-eaa>\n"
         st.code(output, language="text")
 
@@ -329,7 +329,7 @@ if st.session_state.queue:
     next_name = fmt_card_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-"
 
     queue_items_html = "".join(
-        f'<div class="badge">🎭 {fmt_card_name(n)}</div>' for n in st.session_state.queue[2:]
+        f'<div class="badge">:lollipop: {fmt_card_name(n)}</div>' for n in st.session_state.queue[2:]
     ) if len(st.session_state.queue) > 2 else '<div class="badge">—</div>'
 
     calypso_items_html = "".join(
