@@ -272,16 +272,16 @@ if st.session_state.queue:
         output += "<https://epic-queue.streamlit.app/>\n"
         output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
         output += "-# ------------------\n"
-        output += f"🎶 𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n✨👑🎤 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue)>=1 else '-'}\n"
+        output += f"𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮\n👑 {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue)>=1 else '-'}\n"
         output += "-# ------------------\n"
-        output += f"⏭️ 𝑵𝑬𝑿𝑻 𝑼𝑷\n🌟 {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue)>=2 else '-'}\n"
-        output += "-# ------------------\n🛶 𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
+        output += f"𝑵𝑬𝑿𝑻 𝑼𝑷\n🌟 {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue)>=2 else '-'}\n"
+        output += "-# ------------------\n𝑶𝑵 𝑸𝑼𝑬𝑼𝑬\n"
         if len(st.session_state.queue) > 2:
             for person in st.session_state.queue[2:]:
-                output += f"🎭 {fmt_name(person)}\n"
+                output += f":lollipop: {fmt_name(person)}\n"
         else:
             output += "- None\n"
-        output += "-# ------------------\n🏝️ 𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
+        output += "-# ------------------\n𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐\n"
         if st.session_state.calypso:
             for person in st.session_state.calypso:
                 output += f"🌴 {fmt_name(person)}\n"
