@@ -127,7 +127,8 @@ if "initialized" not in st.session_state:
     st.session_state.vc1_data = load_state("vc1")
     st.session_state.vc2_data = load_state("vc2")
     st.session_state.rev = 0
-    st.session_state.current_user = ""
+    st.session_state.current_user_vc1 = ""
+    st.session_state.current_user_vc2 = ""
     st.session_state.show_manager_confirm = False
     st.session_state.manager_candidate = ""
     st.session_state.admin_authenticated = False
@@ -135,7 +136,9 @@ if "initialized" not in st.session_state:
         st.session_state[flag] = False
 
 # Auto-refresh for non-managers
-if st.session_state.current_user != st.session_state.vc1_data["current_manager"] and st.session_state.current_user != st.session_state.vc2_data["current_manager"]:
+is_manager_vc1 = st.session_state.current_user_vc1 == st.session_state.vc1_data["current_manager"]
+is_manager_vc2 = st.session_state.current_user_vc2 == st.session_state.vc2_data["current_manager"]
+if not is_manager_vc1 and not is_manager_vc2:
     st_autorefresh(interval=3000)
 
 st.title("⚔️EPIC Singing VC Queue🎭")
@@ -149,10 +152,10 @@ def render_vc_content(vc_id):
     # Load current VC data
     if vc_id == "vc1":
         vc_data = st.session_state.vc1_data
-        other_vc = "vc2"
+        current_user_key = "current_user_vc1"
     else:
         vc_data = st.session_state.vc2_data
-        other_vc = "vc1"
+        current_user_key = "current_user_vc2"
     
     # Check for updates from other users
     if check_for_updates(vc_id, vc_data["last_modified"]):
@@ -181,9 +184,9 @@ def render_vc_content(vc_id):
         )
 
     def really_claim_manager(name):
-        vc_data["current_user"] = name
         vc_data["current_manager"] = name
         save_state(vc_id, vc_data)
+        st.session_state[current_user_key] = name
         if vc_id == "vc1":
             st.session_state.vc1_data = vc_data
         else:
@@ -210,10 +213,10 @@ def render_vc_content(vc_id):
                 st.warning("Type your name before claiming the queue.")
 
     with claim_cols[2]:
-        if st.session_state.current_user == vc_data["current_manager"] and vc_data["current_manager"]:
+        if st.session_state[current_user_key] == vc_data["current_manager"] and vc_data["current_manager"]:
             if st.button("🔓 Release", use_container_width=True, key=f"{vc_id}_release_btn"):
                 vc_data["current_manager"] = ""
-                vc_data["current_user"] = ""
+                st.session_state[current_user_key] = ""
                 save_state(vc_id, vc_data)
                 if vc_id == "vc1":
                     st.session_state.vc1_data = vc_data
@@ -239,7 +242,7 @@ def render_vc_content(vc_id):
     cols = st.columns([1, 1, 1, 0.3, 1])
     with cols[0]:
         if st.button("⏩ Advance", use_container_width=True, key=f"{vc_id}_advance"):
-            if st.session_state.current_user == vc_data["current_manager"]:
+            if st.session_state[current_user_key] == vc_data["current_manager"]:
                 if vc_data["queue"]:
                     first = vc_data["queue"].pop(0)
                     vc_data["queue"].append(first)
@@ -253,7 +256,7 @@ def render_vc_content(vc_id):
                 st.warning("You are not managing the queue.")
     with cols[1]:
         if st.button("🧹 Clear All", use_container_width=True, key=f"{vc_id}_clear"):
-            if st.session_state.current_user == vc_data["current_manager"]:
+            if st.session_state[current_user_key] == vc_data["current_manager"]:
                 vc_data["queue"].clear()
                 vc_data["calypso"].clear()
                 vc_data["pinged"].clear()
@@ -328,7 +331,7 @@ def render_vc_content(vc_id):
                 st.markdown('</div>', unsafe_allow_html=True)
         return None
 
-    if st.session_state.current_user == vc_data["current_manager"]:
+    if st.session_state[current_user_key] == vc_data["current_manager"]:
         with qa[0]:
             if st.button("➖ Leave", use_container_width=True, key=f"{vc_id}_leave"):
                 st.session_state.show_leave = not st.session_state.show_leave
@@ -405,7 +408,7 @@ def render_vc_content(vc_id):
         left, right = st.columns([1, 2])
         with left:
             st.markdown("#### 🔀 Reorder")
-            if st.session_state.current_user == vc_data["current_manager"]:
+            if st.session_state[current_user_key] == vc_data["current_manager"]:
                 reordered = sortables.sort_items(
                     vc_data["queue"],
                     direction="vertical",
