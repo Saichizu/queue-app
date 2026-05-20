@@ -5,10 +5,12 @@ from PIL import Image, ImageDraw, ImageFont
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime
 import requests
+import time
 
 SAVE_FILE = "queue.json"
 TEMPLATES_DIR = "templates"
 ADMIN_PASSCODE = "531246"
+SYNC_CHECK_INTERVAL = 1  # Check for updates every 1 second
 
 # Ensure templates directory exists
 if not os.path.exists(TEMPLATES_DIR):
@@ -31,32 +33,55 @@ DEFAULT_TEMPLATE = {
     "wheel_link": "https://wheelofnames.com/jr7-eaa"
 }
 
-def load_state():
-    if os.path.exists(SAVE_FILE):
-        with open(SAVE_FILE, "r", encoding="utf-8") as f:
+def load_state(vc_id):
+    """Load state for specific VC (vc1 or vc2)"""
+    save_file = f"queue_{vc_id}.json"
+    if os.path.exists(save_file):
+        with open(save_file, "r", encoding="utf-8") as f:
             data = json.load(f)
-        st.session_state.queue = data.get("queue", [])
-        st.session_state.calypso = data.get("calypso", [])
-        st.session_state.pinged = set(data.get("pinged", []))
-        st.session_state.current_manager = data.get("current_manager", "")
-        st.session_state.current_template = data.get("current_template", "Default EPIC")
-    else:
-        st.session_state.queue = []
-        st.session_state.calypso = []
-        st.session_state.pinged = set()
-        st.session_state.current_manager = ""
-        st.session_state.current_template = "Default EPIC"
-
-def save_state():
-    data = {
-        "queue": st.session_state.queue,
-        "calypso": st.session_state.calypso,
-        "pinged": list(st.session_state.pinged),
-        "current_manager": st.session_state.current_manager,
-        "current_template": st.session_state.current_template
+        return {
+            "queue": data.get("queue", []),
+            "calypso": data.get("calypso", []),
+            "pinged": set(data.get("pinged", [])),
+            "current_manager": data.get("current_manager", ""),
+            "current_template": data.get("current_template", "Default EPIC"),
+            "last_modified": data.get("last_modified", 0)
+        }
+    return {
+        "queue": [],
+        "calypso": [],
+        "pinged": set(),
+        "current_manager": "",
+        "current_template": "Default EPIC",
+        "last_modified": time.time()
     }
-    with open(SAVE_FILE, "w", encoding="utf-8") as f:
+
+def save_state(vc_id, state):
+    """Save state for specific VC"""
+    save_file = f"queue_{vc_id}.json"
+    data = {
+        "queue": state["queue"],
+        "calypso": state["calypso"],
+        "pinged": list(state["pinged"]),
+        "current_manager": state["current_manager"],
+        "current_template": state["current_template"],
+        "last_modified": time.time()
+    }
+    with open(save_file, "w", encoding="utf-8") as f:
         json.dump(data, f)
+
+def check_for_updates(vc_id, current_last_modified):
+    """Check if file has been modified by another user"""
+    save_file = f"queue_{vc_id}.json"
+    if os.path.exists(save_file):
+        try:
+            with open(save_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            last_modified = data.get("last_modified", 0)
+            return last_modified > current_last_modified
+        except:
+            return False
+    return False
 
 def load_template(template_name):
     """Load template from file or return default"""
@@ -95,69 +120,81 @@ def get_available_templates():
                 templates.append(file.replace(".json", ""))
     return templates
 
-# --- Always load state at the top ---
-load_state()
-
+# Initialize session state
 if "initialized" not in st.session_state:
-    st.session_state.rev = 0
     st.session_state.initialized = True
+    st.session_state.current_vc = "vc1"
+    st.session_state.vc1_data = load_state("vc1")
+    st.session_state.vc2_data = load_state("vc2")
+    st.session_state.rev = 0
     st.session_state.current_user = ""
-    st.session_state.needs_rerun = False
-    st.session_state.last_claimed_input = ""
     st.session_state.show_manager_confirm = False
     st.session_state.manager_candidate = ""
     st.session_state.admin_authenticated = False
     for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
         st.session_state[flag] = False
 
-from streamlit_autorefresh import st_autorefresh
-if st.session_state.current_user != st.session_state.current_manager:
+# Auto-refresh for non-managers
+if st.session_state.current_user != st.session_state.vc1_data["current_manager"] and st.session_state.current_user != st.session_state.vc2_data["current_manager"]:
     st_autorefresh(interval=3000)
 
-def bump_and_rerun():
-    save_state()
-    st.session_state.rev += 1
-    st.session_state.needs_rerun = True
-    st.rerun()
+st.title("⚔️EPIC Singing VC Queue🎭")
 
-st.title("⚔️EPIC Singing VC 1 Queue🎭")
-st.markdown(
-    "_Use this only for **Epic Singing VC 1** because changes are saved. "
-    "For Epic Singing VC 2, use [this link](https://epic-queue-2.streamlit.app/)._"
-)
+# ========== MAIN TABS ==========
+vc_tab1, vc_tab2, customize_tab = st.tabs(["🎵 VC 1", "🎵 VC 2", "✨ Customize"])
 
-# ========== TABS SECTION ==========
-tab1, tab2 = st.tabs(["🎵 Queue", "✨ Customize"])
-
-with tab1:
-    # ----------- QUEUE TAB CONTENT -----------
+def render_vc_content(vc_id):
+    """Render queue content for a specific VC"""
     
-    if st.session_state.current_manager:
-        st.info(f"💡 Currently managing the queue: **{st.session_state.current_manager}**")
+    # Load current VC data
+    if vc_id == "vc1":
+        vc_data = st.session_state.vc1_data
+        other_vc = "vc2"
     else:
-        st.info("💡 No one is currently managing the queue. Press 'Manage Queue' to take control.")
+        vc_data = st.session_state.vc2_data
+        other_vc = "vc1"
+    
+    # Check for updates from other users
+    if check_for_updates(vc_id, vc_data["last_modified"]):
+        updated_data = load_state(vc_id)
+        if vc_id == "vc1":
+            st.session_state.vc1_data = updated_data
+            vc_data = updated_data
+        else:
+            st.session_state.vc2_data = updated_data
+            vc_data = updated_data
+        st.rerun()
+    
+    if vc_data["current_manager"]:
+        st.info(f"💡 Currently managing: **{vc_data['current_manager']}**")
+    else:
+        st.info(f"💡 No one is managing {vc_id.upper()}. Press 'Manage Queue' to take control.")
 
     # ----------- Manager Name Input & Claim Button -----------
     claim_cols = st.columns([4, 1, 1])
     with claim_cols[0]:
         manager_name = st.text_input(
             "Type your name",
-            key="manager_input",
+            key=f"{vc_id}_manager_input",
             label_visibility="collapsed",
             placeholder="Type your name"
         )
 
     def really_claim_manager(name):
-        st.session_state.current_user = name
-        st.session_state.current_manager = name
-        save_state()
+        vc_data["current_user"] = name
+        vc_data["current_manager"] = name
+        save_state(vc_id, vc_data)
+        if vc_id == "vc1":
+            st.session_state.vc1_data = vc_data
+        else:
+            st.session_state.vc2_data = vc_data
         st.success("You are now managing the queue.")
         st.session_state.show_manager_confirm = False
         st.session_state.manager_candidate = ""
-        st.session_state.needs_rerun = True
+        st.rerun()
 
     def handle_claim_request(name):
-        current_manager = st.session_state.get("current_manager", "")
+        current_manager = vc_data.get("current_manager", "")
         if name:
             if current_manager and current_manager != name:
                 st.session_state.show_manager_confirm = True
@@ -166,92 +203,117 @@ with tab1:
                 really_claim_manager(name)
 
     with claim_cols[1]:
-        if st.button("🛠 Manage Queue", use_container_width=True):
+        if st.button("🛠 Manage Queue", use_container_width=True, key=f"{vc_id}_claim_btn"):
             if manager_name:
                 handle_claim_request(manager_name)
             else:
                 st.warning("Type your name before claiming the queue.")
 
     with claim_cols[2]:
-        if st.session_state.current_user == st.session_state.current_manager and st.session_state.current_manager:
-            if st.button("🔓 Release Manage Rights", use_container_width=True):
-                st.session_state.current_manager = ""
-                st.session_state.current_user = ""
-                save_state()
+        if st.session_state.current_user == vc_data["current_manager"] and vc_data["current_manager"]:
+            if st.button("🔓 Release", use_container_width=True, key=f"{vc_id}_release_btn"):
+                vc_data["current_manager"] = ""
+                vc_data["current_user"] = ""
+                save_state(vc_id, vc_data)
+                if vc_id == "vc1":
+                    st.session_state.vc1_data = vc_data
+                else:
+                    st.session_state.vc2_data = vc_data
                 st.success("You have released manage rights.")
                 st.rerun()
 
     # Prompt for manager replacement
     if st.session_state.show_manager_confirm:
-        st.warning(f"⚠️ You will REPLACE **{st.session_state.current_manager}** as manager. Are you sure?")
+        st.warning(f"⚠️ You will REPLACE **{vc_data['current_manager']}** as manager. Are you sure?")
         col_yes, col_no = st.columns(2)
         with col_yes:
-            if st.button("Yes, replace", key="manager_yes_btn"):
+            if st.button("Yes, replace", key=f"{vc_id}_manager_yes_btn"):
                 really_claim_manager(st.session_state.manager_candidate)
         with col_no:
-            if st.button("No, cancel", key="manager_no_btn"):
+            if st.button("No, cancel", key=f"{vc_id}_manager_no_btn"):
                 st.session_state.show_manager_confirm = False
                 st.session_state.manager_candidate = ""
 
-    # Enter key handling for manager name input
-    if manager_name and manager_name != st.session_state.last_claimed_input:
-        handle_claim_request(manager_name)
-        st.session_state.last_claimed_input = manager_name
-
     # ----------- Top button bar -----------
     st.markdown("#### Main Actions")
-    qa = st.columns(4)
     cols = st.columns([1, 1, 1, 0.3, 1])
     with cols[0]:
-        if st.button("⏩ Advance", use_container_width=True):
-            if st.session_state.current_user == st.session_state.current_manager:
-                if st.session_state.queue:
-                    first = st.session_state.queue.pop(0)
-                    st.session_state.queue.append(first)
-                    bump_and_rerun()
+        if st.button("⏩ Advance", use_container_width=True, key=f"{vc_id}_advance"):
+            if st.session_state.current_user == vc_data["current_manager"]:
+                if vc_data["queue"]:
+                    first = vc_data["queue"].pop(0)
+                    vc_data["queue"].append(first)
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
             else:
-                st.warning("You are not managing the queue. Press 'Manage Queue' to claim control.")
+                st.warning("You are not managing the queue.")
     with cols[1]:
-        if st.button("🧹 Clear All", use_container_width=True):
-            if st.session_state.current_user == st.session_state.current_manager:
-                st.session_state.queue.clear()
-                st.session_state.calypso.clear()
-                st.session_state.pinged.clear()
-                bump_and_rerun()
+        if st.button("🧹 Clear All", use_container_width=True, key=f"{vc_id}_clear"):
+            if st.session_state.current_user == vc_data["current_manager"]:
+                vc_data["queue"].clear()
+                vc_data["calypso"].clear()
+                vc_data["pinged"].clear()
+                save_state(vc_id, vc_data)
+                if vc_id == "vc1":
+                    st.session_state.vc1_data = vc_data
+                else:
+                    st.session_state.vc2_data = vc_data
+                st.rerun()
             else:
-                st.warning("You are not managing the queue. Press 'Manage Queue' to claim control.")
+                st.warning("You are not managing the queue.")
     with cols[2]:
-        if st.button("🔄 Refresh", use_container_width=True):
-            st.session_state.rev += 1
+        if st.button("🔄 Refresh", use_container_width=True, key=f"{vc_id}_refresh"):
             st.rerun()
-    with cols[3]:
-        st.write("")  # spacer
-    with cols[4]:
-        st.write("")  # extra spacer for layout
 
-    # ----------- Input to join (side by side, with placeholder) -----------
+    # Template selector - after main actions
+    st.markdown("#### Select Template")
+    available_templates = get_available_templates()
+    selected_template = st.selectbox(
+        "Select Template",
+        available_templates,
+        index=available_templates.index(vc_data["current_template"]) if vc_data["current_template"] in available_templates else 0,
+        key=f"{vc_id}_template_select"
+    )
+    
+    if selected_template != vc_data["current_template"]:
+        vc_data["current_template"] = selected_template
+        save_state(vc_id, vc_data)
+        if vc_id == "vc1":
+            st.session_state.vc1_data = vc_data
+        else:
+            st.session_state.vc2_data = vc_data
+        st.rerun()
+
+    # ----------- Input to join -----------
     def join_on_enter():
-        name = st.session_state.get("name_input", "").strip()
-        if name and name not in st.session_state.queue and name not in st.session_state.calypso:
-            st.session_state.queue.append(name)
-            st.session_state.name_input = ""
-            save_state()
-            st.session_state.rev += 1
-            st.session_state.needs_rerun = True
+        name = st.session_state.get(f"{vc_id}_name_input", "").strip()
+        if name and name not in vc_data["queue"] and name not in vc_data["calypso"]:
+            vc_data["queue"].append(name)
+            st.session_state[f"{vc_id}_name_input"] = ""
+            save_state(vc_id, vc_data)
+            if vc_id == "vc1":
+                st.session_state.vc1_data = vc_data
+            else:
+                st.session_state.vc2_data = vc_data
+            st.rerun()
 
     join_cols = st.columns([4, 1])
     with join_cols[0]:
         st.text_input(
             "",
-            key="name_input",
+            key=f"{vc_id}_name_input",
             on_change=join_on_enter,
             label_visibility="collapsed",
             placeholder="Add People"
         )
     with join_cols[1]:
-        st.button("🎤 Join", on_click=join_on_enter, use_container_width=True)
+        st.button("🎤 Join", on_click=join_on_enter, use_container_width=True, key=f"{vc_id}_join_btn")
 
-    # ----------- Quick Actions (Leave, Hold, Return, Ping) -----------
+    # ----------- Quick Actions -----------
     st.markdown("#### Quick Actions")
     qa = st.columns(4)
 
@@ -266,100 +328,122 @@ with tab1:
                 st.markdown('</div>', unsafe_allow_html=True)
         return None
 
-    if st.session_state.current_user == st.session_state.current_manager:
+    if st.session_state.current_user == vc_data["current_manager"]:
         with qa[0]:
-            if st.button("➖ Leave", use_container_width=True):
+            if st.button("➖ Leave", use_container_width=True, key=f"{vc_id}_leave"):
                 st.session_state.show_leave = not st.session_state.show_leave
                 for flag in ["show_hold", "show_return", "show_ping"]:
                     st.session_state[flag] = False
             if st.session_state.show_leave:
-                person = render_names(st.session_state.queue, "Leave")
+                person = render_names(vc_data["queue"], f"{vc_id}_Leave")
                 if person:
-                    st.session_state.queue.remove(person)
-                    st.session_state.pinged.discard(person)
-                    bump_and_rerun()
+                    vc_data["queue"].remove(person)
+                    vc_data["pinged"].discard(person)
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
         with qa[1]:
-            if st.button("⏳ Hold", use_container_width=True):
+            if st.button("⏳ Hold", use_container_width=True, key=f"{vc_id}_hold"):
                 st.session_state.show_hold = not st.session_state.show_hold
                 for flag in ["show_leave", "show_return", "show_ping"]:
                     st.session_state[flag] = False
             if st.session_state.show_hold:
-                person = render_names(st.session_state.queue, "Hold")
+                person = render_names(vc_data["queue"], f"{vc_id}_Hold")
                 if person:
-                    st.session_state.queue.remove(person)
-                    st.session_state.calypso.append(person)
-                    bump_and_rerun()
+                    vc_data["queue"].remove(person)
+                    vc_data["calypso"].append(person)
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
         with qa[2]:
-            if st.button("🏝️ Return", use_container_width=True):
+            if st.button("🏝️ Return", use_container_width=True, key=f"{vc_id}_return"):
                 st.session_state.show_return = not st.session_state.show_return
                 for flag in ["show_leave", "show_hold", "show_ping"]:
                     st.session_state[flag] = False
             if st.session_state.show_return:
-                person = render_names(st.session_state.calypso, "↩️")
+                person = render_names(vc_data["calypso"], f"{vc_id}_Return")
                 if person:
-                    st.session_state.calypso.remove(person)
-                    st.session_state.queue.append(person)
-                    bump_and_rerun()
+                    vc_data["calypso"].remove(person)
+                    vc_data["queue"].append(person)
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
         with qa[3]:
-            if st.button("📣 Ping/Unping", use_container_width=True):
+            if st.button("📣 Ping/Unping", use_container_width=True, key=f"{vc_id}_ping"):
                 st.session_state.show_ping = not st.session_state.show_ping
                 for flag in ["show_leave", "show_hold", "show_return"]:
                     st.session_state[flag] = False
             if st.session_state.show_ping:
-                names = st.session_state.queue + st.session_state.calypso
-                person = render_names(names, "📣")
+                names = vc_data["queue"] + vc_data["calypso"]
+                person = render_names(names, f"{vc_id}_Ping")
                 if person:
-                    if person in st.session_state.pinged:
-                        st.session_state.pinged.remove(person)
+                    if person in vc_data["pinged"]:
+                        vc_data["pinged"].remove(person)
                     else:
-                        st.session_state.pinged.add(person)
-                    bump_and_rerun()
+                        vc_data["pinged"].add(person)
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
     else:
         st.info("⚠️ You are not managing the queue. Press 'Manage Queue' to interact with it.")
 
     # ----------- Layout: Reorder + Output -----------
-    if st.session_state.queue:
+    if vc_data["queue"]:
         st.markdown("### Queue Manager")
         left, right = st.columns([1, 2])
         with left:
             st.markdown("#### 🔀 Reorder")
-            if st.session_state.current_user == st.session_state.current_manager:
+            if st.session_state.current_user == vc_data["current_manager"]:
                 reordered = sortables.sort_items(
-                    st.session_state.queue,
+                    vc_data["queue"],
                     direction="vertical",
-                    key=f"sortable_{st.session_state.rev}"
+                    key=f"sortable_{vc_id}_{st.session_state.rev}"
                 )
-                if reordered != st.session_state.queue:
-                    st.session_state.queue = reordered
-                    save_state()
-                    st.session_state.rev += 1
+                if reordered != vc_data["queue"]:
+                    vc_data["queue"] = reordered
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
                     st.rerun()
             else:
-                st.info("🔹 Only the manager can reorder the queue.")
+                st.info("🔹 Only the manager can reorder.")
         with right:
-            # Load current template
-            current_template = load_template(st.session_state.current_template)
+            current_template = load_template(vc_data["current_template"])
             
             def fmt_name(name):
-                return f"{name} 📣" if name in st.session_state.pinged else name
+                return f"{name} 📣" if name in vc_data["pinged"] else name
             
             output = f"{current_template['title']}\n"
             output += f"{current_template['url']}\n"
-            output += f"Template by: {st.session_state.current_template}\n"
-            output += f"Managed by: {st.session_state.current_manager if st.session_state.current_manager else '-'}\n"
+            output += f"Template by: {vc_data['current_template']}\n"
+            output += f"Managed by: {vc_data['current_manager'] if vc_data['current_manager'] else '-'}\n"
             output += "-# ------------------\n"
-            output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name(st.session_state.queue[0]) if len(st.session_state.queue)>=1 else '-'}\n"
+            output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
             output += "-# ------------------\n"
-            output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name(st.session_state.queue[1]) if len(st.session_state.queue)>=2 else '-'}\n"
+            output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name(vc_data['queue'][1]) if len(vc_data['queue'])>=2 else '-'}\n"
             output += "-# ------------------\n" + current_template['on_queue'] + "\n"
-            if len(st.session_state.queue) > 2:
-                for person in st.session_state.queue[2:]:
+            if len(vc_data["queue"]) > 2:
+                for person in vc_data["queue"][2:]:
                     output += f"{current_template['queue_symbol']} {fmt_name(person)}\n"
             else:
                 output += "- None\n"
             output += "-# ------------------\n" + current_template['away_calypso'] + "\n"
-            if st.session_state.calypso:
-                for person in st.session_state.calypso:
+            if vc_data["calypso"]:
+                for person in vc_data["calypso"]:
                     output += f"{current_template['calypso_symbol']} {fmt_name(person)}\n"
             else:
                 output += "- None\n"
@@ -368,7 +452,7 @@ with tab1:
             output += f"{current_template['wheel_link']}\n"
             st.code(output, language="text")
 
-        # ----------- ✨ Compact Queue Card (Beautiful Screenshot Card) -----------
+        # ----------- Compact Queue Card -----------
         st.markdown(
             """
             <style>
@@ -397,25 +481,25 @@ with tab1:
         )
 
         def fmt_card_name(name):
-            return f"📣 {name}" if name in st.session_state.pinged else name
+            return f"📣 {name}" if name in vc_data["pinged"] else name
 
-        now_name = fmt_card_name(st.session_state.queue[0]) if len(st.session_state.queue) >= 1 else "-"
-        next_name = fmt_card_name(st.session_state.queue[1]) if len(st.session_state.queue) >= 2 else "-"
+        now_name = fmt_card_name(vc_data["queue"][0]) if len(vc_data["queue"]) >= 1 else "-"
+        next_name = fmt_card_name(vc_data["queue"][1]) if len(vc_data["queue"]) >= 2 else "-"
 
         queue_items_html = "".join(
-            f'<div class="badge">🎭 {fmt_card_name(n)}</div>' for n in st.session_state.queue[2:]
-        ) if len(st.session_state.queue) > 2 else '<div class="badge">—</div>'
+            f'<div class="badge">🎭 {fmt_card_name(n)}</div>' for n in vc_data["queue"][2:]
+        ) if len(vc_data["queue"]) > 2 else '<div class="badge">—</div>'
 
         calypso_items_html = "".join(
-            f'<div class="badge">🌴 {fmt_card_name(n)}</div>' for n in st.session_state.calypso
-        ) if st.session_state.calypso else '<div class="badge">—</div>'
+            f'<div class="badge">🌴 {fmt_card_name(n)}</div>' for n in vc_data["calypso"]
+        ) if vc_data["calypso"] else '<div class="badge">—</div>'
 
         card_html = f"""
         <div class="queue-card">
             <div class="qc-head">
                 <div>
                     <div class="qc-title">🎵 EPIC Song Queue</div>
-                    <div class="qc-managed">Managed by {st.session_state.current_manager or '-'}</div>
+                    <div class="qc-managed">Managed by {vc_data['current_manager'] or '-'}</div>
                 </div>
                 <div style="text-align:right;">
                     <div style="font-size:12px;color:#f5e6ff;">Now</div>
@@ -437,10 +521,16 @@ with tab1:
             <div class="foot">Share this card by screenshot — the text queue above remains for copy/paste.</div>
         </div>
         """
-
         st.markdown(card_html, unsafe_allow_html=True)
 
-with tab2:
+# Render VC tabs
+with vc_tab1:
+    render_vc_content("vc1")
+
+with vc_tab2:
+    render_vc_content("vc2")
+
+with customize_tab:
     # ----------- CUSTOMIZE TAB CONTENT -----------
     st.header("✨ Customize Queue Template")
     
@@ -451,13 +541,8 @@ with tab2:
     selected_template = st.selectbox(
         "Select Template",
         available_templates,
-        index=available_templates.index(st.session_state.current_template) if st.session_state.current_template in available_templates else 0
+        index=0
     )
-    
-    if selected_template != st.session_state.current_template:
-        st.session_state.current_template = selected_template
-        save_state()
-        st.success(f"Switched to template: {selected_template}")
     
     # Load current template for editing
     template = load_template(selected_template)
@@ -540,8 +625,6 @@ with tab2:
                 else:
                     save_template(new_template_name, preview_template)
                     st.success(f"✅ Template '{new_template_name}' saved successfully!")
-                    st.session_state.current_template = new_template_name
-                    save_state()
                     st.rerun()
             else:
                 st.error("Please enter a template name.")
@@ -552,11 +635,7 @@ with tab2:
     cols = st.columns(min(len(available_templates), 3))
     for idx, tmpl_name in enumerate(available_templates):
         with cols[idx % 3]:
-            if st.button(f"📌 {tmpl_name}", use_container_width=True, key=f"load_tmpl_{tmpl_name}"):
-                st.session_state.current_template = tmpl_name
-                save_state()
-                st.success(f"Loaded: {tmpl_name}")
-                st.rerun()
+            st.button(f"📌 {tmpl_name}", use_container_width=True, key=f"load_tmpl_{tmpl_name}", disabled=True)
     
     st.markdown("---")
     st.subheader("🗑️ Delete Templates")
@@ -582,7 +661,6 @@ with tab2:
     if st.session_state.admin_authenticated and passcode_input == ADMIN_PASSCODE:
         st.success("✅ Admin passcode correct!")
         
-        # Get templates that can be deleted (exclude Default EPIC)
         deletable_templates = [t for t in available_templates if t != "Default EPIC"]
         
         if deletable_templates:
@@ -599,26 +677,13 @@ with tab2:
                 if st.button("🗑️ Delete Selected Template", use_container_width=True, key="delete_tmpl_btn"):
                     if delete_template(template_to_delete):
                         st.success(f"✅ Template '{template_to_delete}' has been deleted!")
-                        if st.session_state.current_template == template_to_delete:
-                            st.session_state.current_template = "Default EPIC"
-                            save_state()
                         st.rerun()
                     else:
                         st.error(f"Could not delete template '{template_to_delete}'")
-            
-            with delete_btn_col2:
-                st.markdown("")  # spacer
         else:
             st.info("ℹ️ No custom templates to delete. Only the Default EPIC template exists.")
     elif passcode_input and not st.session_state.admin_authenticated:
         st.error("❌ Incorrect passcode!")
-
-
-# Save & auto-rerun management
-save_state()
-if st.session_state.get("needs_rerun"):
-    st.session_state.needs_rerun = False
-    st.rerun()
 
 # --- Custom Styling for small UI elements ---
 st.markdown("""
