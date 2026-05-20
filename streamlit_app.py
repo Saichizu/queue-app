@@ -19,8 +19,8 @@ if not os.path.exists(TEMPLATES_DIR):
 # Default template
 DEFAULT_TEMPLATE = {
     "name": "Default EPIC",
-    "title": "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 1 🎭",
-    "url": "https://epic-queue.streamlit.app/",
+    "title": "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭",
+    "url": "<https://epic-queue.streamlit.app>/",
     "currently_singing": "𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮",
     "current_symbol": "👑",
     "next_up": "𝑵𝑬𝑿𝑻 𝑼𝑷",
