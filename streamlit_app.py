@@ -8,6 +8,7 @@ import requests
 
 SAVE_FILE = "queue.json"
 TEMPLATES_DIR = "templates"
+ADMIN_PASSCODE = "531246"
 
 # Ensure templates directory exists
 if not os.path.exists(TEMPLATES_DIR):
@@ -74,6 +75,17 @@ def save_template(template_name, template_data):
     with open(template_file, "w", encoding="utf-8") as f:
         json.dump(template_data, f, indent=2)
 
+def delete_template(template_name):
+    """Delete template file"""
+    if template_name == "Default EPIC":
+        return False
+    
+    template_file = os.path.join(TEMPLATES_DIR, f"{template_name}.json")
+    if os.path.exists(template_file):
+        os.remove(template_file)
+        return True
+    return False
+
 def get_available_templates():
     """Get list of available templates"""
     templates = ["Default EPIC"]
@@ -94,6 +106,7 @@ if "initialized" not in st.session_state:
     st.session_state.last_claimed_input = ""
     st.session_state.show_manager_confirm = False
     st.session_state.manager_candidate = ""
+    st.session_state.admin_authenticated = False
     for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
         st.session_state[flag] = False
 
@@ -544,6 +557,61 @@ with tab2:
                 save_state()
                 st.success(f"Loaded: {tmpl_name}")
                 st.rerun()
+    
+    st.markdown("---")
+    st.subheader("🗑️ Delete Templates")
+    
+    st.warning("⚠️ **This section requires a passcode. Only admins can delete templates.**")
+    
+    delete_col1, delete_col2 = st.columns([2, 2])
+    
+    with delete_col1:
+        passcode_input = st.text_input(
+            "Enter Admin Passcode",
+            type="password",
+            placeholder="Enter passcode to delete templates",
+            key="delete_passcode"
+        )
+    
+    if passcode_input:
+        if passcode_input == ADMIN_PASSCODE:
+            st.session_state.admin_authenticated = True
+        else:
+            st.session_state.admin_authenticated = False
+    
+    if st.session_state.admin_authenticated and passcode_input == ADMIN_PASSCODE:
+        st.success("✅ Admin passcode correct!")
+        
+        # Get templates that can be deleted (exclude Default EPIC)
+        deletable_templates = [t for t in available_templates if t != "Default EPIC"]
+        
+        if deletable_templates:
+            with delete_col2:
+                template_to_delete = st.selectbox(
+                    "Select template to delete",
+                    deletable_templates,
+                    key="template_to_delete"
+                )
+            
+            delete_btn_col1, delete_btn_col2 = st.columns(2)
+            
+            with delete_btn_col1:
+                if st.button("🗑️ Delete Selected Template", use_container_width=True, key="delete_tmpl_btn"):
+                    if delete_template(template_to_delete):
+                        st.success(f"✅ Template '{template_to_delete}' has been deleted!")
+                        if st.session_state.current_template == template_to_delete:
+                            st.session_state.current_template = "Default EPIC"
+                            save_state()
+                        st.rerun()
+                    else:
+                        st.error(f"Could not delete template '{template_to_delete}'")
+            
+            with delete_btn_col2:
+                st.markdown("")  # spacer
+        else:
+            st.info("ℹ️ No custom templates to delete. Only the Default EPIC template exists.")
+    elif passcode_input and not st.session_state.admin_authenticated:
+        st.error("❌ Incorrect passcode!")
 
 
 # Save & auto-rerun management
