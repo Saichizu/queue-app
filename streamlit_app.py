@@ -143,8 +143,13 @@ if not is_manager_vc1 and not is_manager_vc2:
 
 st.title("⚔️EPIC Singing VC Queue🎭")
 
-# ========== MAIN TABS ==========
-vc_tab1, vc_tab2, customize_tab = st.tabs(["🎵 VC 1", "🎵 VC 2", "✨ Customize"])
+# ========== MAIN NAVIGATION ==========
+selected_tab = st.segmented_control(
+    "Select Section",
+    ["🎵 VC 1", "🎵 VC 2", "✨ Customize"],
+    default=st.session_state.get("main_selected_tab", "🎵 VC 1"),
+    key="main_selected_tab"
+)
 
 def render_vc_content(vc_id):
     """Render queue content for a specific VC"""
@@ -526,14 +531,14 @@ def render_vc_content(vc_id):
         """
         st.markdown(card_html, unsafe_allow_html=True)
 
-# Render VC tabs
-with vc_tab1:
+# Render selected section
+if selected_tab == "🎵 VC 1":
     render_vc_content("vc1")
 
-with vc_tab2:
+elif selected_tab == "🎵 VC 2":
     render_vc_content("vc2")
 
-with customize_tab:
+elif selected_tab == "✨ Customize":
     # ----------- CUSTOMIZE TAB CONTENT -----------
     st.header("✨ Customize Queue Template")
     
