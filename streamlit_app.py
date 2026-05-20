@@ -30,7 +30,7 @@ DEFAULT_TEMPLATE = {
     "away_calypso": "𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐",
     "calypso_symbol": "🌴",
     "reactions": ":cheese: — Join the Queue\n:mouse_trap: — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold",
-    "wheel_link": "https://wheelofnames.com/jr7-eaa"
+    "wheel_link": "<https://wheelofnames.com/jr7-eaa>"
 }
 
 def load_state(vc_id):
