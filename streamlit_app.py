@@ -639,11 +639,14 @@ def render_vc_content(vc_id):
             if st.session_state[current_user_key] == vc_data["current_manager"]:
                 # --- CHANGE THIS LINE TO REMOVE ROLES FROM REORDER LIST ---
                 display_items = [f"{p} 📣" if p in vc_data["pinged"] else p for p in vc_data["queue"]]
-                
+
+                # Force sortable to refresh whenever queue length/content changes
+                sortable_key = f"sortable_{vc_id}_{len(vc_data['queue'])}_{hash(tuple(vc_data['queue']))}_{st.session_state.rev}"
+
                 reordered_display = sortables.sort_items(
                     display_items,
                     direction="vertical",
-                    key=f"sortable_{vc_id}_{st.session_state.rev}"
+                    key=sortable_key
                 )
                 # --- CHANGE THIS LINE TO MAP THE CLEAN DISPLAY BACK TO REAL NAMES ---
                 display_to_name = {
