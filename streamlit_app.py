@@ -589,7 +589,7 @@ def render_vc_content(vc_id):
             spin_disabled = not is_manager or len(filtered_songs) == 0
             spin_clicked = st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
 
-        # 2. Handle Spin Execution via State Bridge (Before selectbox renders)
+        # 2. Handle Spin Execution via State Bridge
         spin_target_key = f"{vc_id}_spun_song_bridge"
         if spin_clicked and is_manager:
             import random
@@ -614,12 +614,19 @@ def render_vc_content(vc_id):
             spin_placeholder.empty()
             st.session_state[spin_target_key] = winning_song
             st.toast(f"🎯 Landed on: {winning_song}!")
+            
+            # FORCE RE-RUN HERE: Tells Streamlit to immediately rebuild the UI with the spun song
+            st.rerun()
 
-        # 3. Render Dropdown Menu (Synchronized perfectly with Spin result)
+        # 3. Render Dropdown Menu (Synchronized perfectly with Spun state)
         current_song = vc_data.get("selected_song", "")
         
-        # Check if a spin just happened, otherwise read from database record
-        target_song = st.session_state.get(spin_target_key, current_song)
+        # Check if a spin bridge value exists, use it, then pop it cleanly
+        if spin_target_key in st.session_state:
+            target_song = st.session_state[spin_target_key]
+            del st.session_state[spin_target_key]
+        else:
+            target_song = current_song
         
         default_idx = (filtered_songs_with_none.index(target_song)
                        if target_song in filtered_songs_with_none else 0)
@@ -632,10 +639,6 @@ def render_vc_content(vc_id):
             disabled=not is_manager,
             label_visibility="collapsed"
         )
-
-        # Clear the state bridge once consumed by the selectbox index
-        if spin_target_key in st.session_state:
-            del st.session_state[spin_target_key]
 
         # 4. Trigger State Updates and Cleanups on Song Change
         if is_manager and chosen_song != "— Select a song —" and chosen_song != current_song:
@@ -729,13 +732,13 @@ def render_vc_content(vc_id):
                         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6ULDGyRw0uhECEhAaQ/giphy.gif",
                         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/qLErpwsfLyY6RSTJlJ/giphy.gif",
                         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iRDkNp3c0FXem0lCCF/giphy.gif",
-                        "https://tenor.com/n37Q1sMavJa.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnV0Y3QycHUwOHE3aHBydDBmZXNibDZramp2dTM3ZzVoMHJ4MGFtYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cLjmtVDE8RXOPnviKv/giphy.gif",
                         "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YTNlbjk5NnFrZzltNzNpcHBjazUwa3h4dHV4a2Z4NjZwdnI0bXltYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VDZDQWaCR2YhQ0qeUo/giphy.gif",
                         "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azUyaTV4M3Q0bG9mdjN3bmxrd3hmeXRleGYzaHducmwxdDY3cXh0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QN7yjB1My4sNhzNTg4/giphy.gif",
                         "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YXU0ZnR4dngxOWxxOWxhZDRmcHMyNGI3czM5ODV5eHNoMnV0MGpubyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mmp8mYjezjgfi1SXW9/giphy.gif",
                         "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWp6ajJoc2MxNTAxdDc5aXcycXExenp3N3g3enVtOWljbmtpMjdlYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ecotXu1Vhklym7D8rG/giphy.gif",
-                        "https://tenor.com/bOIOd.gif",
-                        "https://tenor.com/bCn8l.gif"
+                        "https://media1.tenor.com/m/oe62qCQfpS4AAAAd/tsue-to-tsurugi-no-wistoria-wistoria-wand-and-sword.gif",
+                        "https://media1.tenor.com/m/pTehBNi86LMAAAAC/my-hero-academia-boku-no-hero-academia.gif"
                     ]
                     
                     battle_placeholder = st.empty()
