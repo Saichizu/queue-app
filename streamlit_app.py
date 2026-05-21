@@ -686,7 +686,7 @@ def render_vc_content(vc_id):
                 st.info("Search and select a song above to assign roles.")
             else:
                 st.info("The manager hasn't selected a song yet.")
-        
+
 # Render selected section
 if selected_tab == "🎵 VC 1":
     render_vc_content("vc1")
@@ -726,4 +726,142 @@ elif selected_tab == "✨ Customize":
     
     with col2:
         st.text_input("On Queue Text", value=template.get("on_queue", ""), key="tmpl_on_queue")
-        st.text_input("Queue Symbol", value=template.get("queue_symbol", ""), key="tmpl_queue_sym")
+        st.text_input("Queue Symbol", value=template.get("queue_symbol", ""), key="tmpl_queue_symbol")
+        st.text_input("Away with Calypso Text", value=template.get("away_calypso", ""), key="tmpl_away_calypso")
+        st.text_input("Calypso Symbol", value=template.get("calypso_symbol", ""), key="tmpl_calypso_symbol")
+        st.text_area("Reactions Info", value=template.get("reactions", ""), key="tmpl_reactions", height=80)
+        st.text_input("Wheel Link", value=template.get("wheel_link", ""), key="tmpl_wheel_link")
+    
+    st.markdown("---")
+    
+    # Preview
+    st.subheader("📋 Preview")
+    preview_template = {
+        "title": st.session_state.tmpl_title,
+        "url": st.session_state.tmpl_url,
+        "currently_singing": st.session_state.tmpl_currently_singing,
+        "current_symbol": st.session_state.tmpl_current_symbol,
+        "next_up": st.session_state.tmpl_next_up,
+        "next_symbol": st.session_state.tmpl_next_symbol,
+        "on_queue": st.session_state.tmpl_on_queue,
+        "queue_symbol": st.session_state.tmpl_queue_symbol,
+        "away_calypso": st.session_state.tmpl_away_calypso,
+        "calypso_symbol": st.session_state.tmpl_calypso_symbol,
+        "reactions": st.session_state.tmpl_reactions,
+        "wheel_link": st.session_state.tmpl_wheel_link
+    }
+    
+    preview_output = f"{preview_template['title']}\n"
+    preview_output += f"{preview_template['url']}\n"
+    preview_output += f"Template by: {selected_template}\n"
+    preview_output += "Managed by: [Manager Name]\n"
+    preview_output += "-# ------------------\n"
+    preview_output += f"{preview_template['currently_singing']}\n{preview_template['current_symbol']} [Person 1]\n"
+    preview_output += "-# ------------------\n"
+    preview_output += f"{preview_template['next_up']}\n{preview_template['next_symbol']} [Person 2]\n"
+    preview_output += "-# ------------------\n" + preview_template['on_queue'] + "\n"
+    preview_output += f"{preview_template['queue_symbol']} [Person 3]\n"
+    preview_output += "-# ------------------\n" + preview_template['away_calypso'] + "\n"
+    preview_output += f"{preview_template['calypso_symbol']} [Person 4]\n"
+    preview_output += "-# ------------------\nReact to join the legend:\n" + preview_template['reactions'] + "\n"
+    preview_output += "-# ------------------\n"
+    preview_output += f"{preview_template['wheel_link']}\n"
+    
+    st.code(preview_output, language="text")
+    
+    st.markdown("---")
+    st.subheader("💾 Save Template")
+    
+    save_col1, save_col2 = st.columns([3, 1])
+    
+    with save_col1:
+        new_template_name = st.text_input(
+            "Template Name (must be unique)",
+            placeholder="e.g., My Custom Queue",
+            key="new_template_name"
+        )
+    
+    with save_col2:
+        if st.button("💾 Save Template", use_container_width=True):
+            if new_template_name:
+                if new_template_name == "Default EPIC":
+                    st.error("Cannot overwrite the Default EPIC template.")
+                else:
+                    save_template(new_template_name, preview_template)
+                    st.success(f"✅ Template '{new_template_name}' saved successfully!")
+                    st.rerun()
+            else:
+                st.error("Please enter a template name.")
+    
+    st.markdown("---")
+    st.subheader("📚 Available Templates")
+    
+    cols = st.columns(min(len(available_templates), 3))
+    for idx, tmpl_name in enumerate(available_templates):
+        with cols[idx % 3]:
+            st.button(f"📌 {tmpl_name}", use_container_width=True, key=f"load_tmpl_{tmpl_name}", disabled=True)
+    
+    st.markdown("---")
+    st.subheader("🗑️ Delete Templates")
+    
+    st.warning("⚠️ **This section requires a passcode. Only admins can delete templates.**")
+    
+    delete_col1, delete_col2 = st.columns([2, 2])
+    
+    with delete_col1:
+        passcode_input = st.text_input(
+            "Enter Admin Passcode",
+            type="password",
+            placeholder="Enter passcode to delete templates",
+            key="delete_passcode"
+        )
+    
+    if passcode_input:
+        if passcode_input == ADMIN_PASSCODE:
+            st.session_state.admin_authenticated = True
+        else:
+            st.session_state.admin_authenticated = False
+    
+    if st.session_state.admin_authenticated and passcode_input == ADMIN_PASSCODE:
+        st.success("✅ Admin passcode correct!")
+        
+        deletable_templates = [t for t in available_templates if t != "Default EPIC"]
+        
+        if deletable_templates:
+            with delete_col2:
+                template_to_delete = st.selectbox(
+                    "Select template to delete",
+                    deletable_templates,
+                    key="template_to_delete"
+                )
+            
+            delete_btn_col1, delete_btn_col2 = st.columns(2)
+            
+            with delete_btn_col1:
+                if st.button("🗑️ Delete Selected Template", use_container_width=True, key="delete_tmpl_btn"):
+                    if delete_template(template_to_delete):
+                        st.success(f"✅ Template '{template_to_delete}' has been deleted!")
+                        st.rerun()
+                    else:
+                        st.error(f"Could not delete template '{template_to_delete}'")
+        else:
+            st.info("ℹ️ No custom templates to delete. Only the Default EPIC template exists.")
+    elif passcode_input and not st.session_state.admin_authenticated:
+        st.error("❌ Incorrect passcode!")
+
+# --- Custom Styling for small UI elements ---
+st.markdown("""
+    <style>
+    .name-btn button {
+        font-size: clamp(8px, 1.2vw, 12px) !important;
+        padding: 6px 8px !important;
+        margin: 2px !important;
+        border-radius: 10px !important;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    div[data-testid="stHorizontalBlock"] { gap: 6px !important; }
+    div[data-testid="stVerticalBlock"] { gap: 4px !important; }
+    </style>
+""", unsafe_allow_html=True)
