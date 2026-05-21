@@ -613,7 +613,7 @@ def render_vc_content(vc_id):
             raw_assignments = vc_data.get("role_assignments", {})
             assignments = {}
             
-            # CRITICAL FORMAT SANITIZATION: Convert old selectbox string data smoothly to list objects
+            # CRITICAL FORMAT SANITIZATION: Safely converts any old selectbox string data to proper list arrays
             for k, v in raw_assignments.items():
                 if isinstance(v, list):
                     assignments[k] = v
@@ -644,7 +644,7 @@ def render_vc_content(vc_id):
             for role in roles:
                 current_assigned = assignments.get(role, [])
                 
-                # SAFEGUARD FIX: Clean out anyone who left the queue/calypso pool
+                # SAFEGUARD FIX: Strip away anyone who left the queue or calypso pools
                 default_assigned = [person for person in current_assigned if person in all_people]
                 
                 if len(default_assigned) != len(current_assigned):
