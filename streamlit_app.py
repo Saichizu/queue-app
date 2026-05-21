@@ -478,8 +478,12 @@ def render_vc_content(vc_id):
         # Build reverse map: person → list of roles assigned to them
         role_assignments = vc_data.get("role_assignments", {})
         person_to_roles = {}
-        for role, person in role_assignments.items():
-            person_to_roles.setdefault(person, []).append(role)
+        for role, people in role_assignments.items():
+            # Support both array strings and old scalar backward compatibility strings
+            loop_pool = people if isinstance(people, list) else ([people] if people else [])
+            for person in loop_pool:
+                if person and person != "— Unassigned —":
+                    person_to_roles.setdefault(person, []).append(role)
 
         def fmt_name(name):
             """Format name with ping indicator and assigned roles."""
@@ -594,7 +598,6 @@ def render_vc_content(vc_id):
                 "role_assignments": dict(vc_data.get("role_assignments", {}))
             })
             
-            # Sync to persistent memory database
             vc_data["selected_song"] = winning_song
             vc_data["role_assignments"] = {} 
             active_song = winning_song
@@ -605,7 +608,6 @@ def render_vc_content(vc_id):
             else:
                 st.session_state.vc2_data = vc_data
                 
-            # Direct override to force sync the dropdown key state
             st.session_state[f"{vc_id}_song_select"] = winning_song
             spin_triggered = True
 
@@ -639,7 +641,7 @@ def render_vc_content(vc_id):
             )
 
         with control_col2:
-            st.write("") # Text alignment layout padding
+            st.write("") 
             st.write("")
             st.button("🎰 Spin!", use_container_width=True, key=f"{vc_id}_spin_btn", disabled=not is_manager)
 
@@ -663,7 +665,7 @@ def render_vc_content(vc_id):
             st.balloons()
             st.rerun()
 
-        # --- STEP 4: Render Permanent Choice Badge (Spacers Included) ---
+        # --- STEP 4: Render Choice Badge ---
         if active_song:
             st.markdown(
                 f"""
@@ -675,12 +677,19 @@ def render_vc_content(vc_id):
                 unsafe_allow_html=True
             )
 
-        # --- STEP 5: Dynamic Role Assignment Processing Frame ---
+        # --- STEP 5: Vertical Role Assignment Matrix with Multiselect & War ---
         if active_song and active_song in EPIC_SONGS:
             roles = EPIC_SONGS[active_song]
-            assignments = dict(vc_data.get("role_assignments", {}))
-            all_people = vc_data["queue"] + vc_data["calypso"]
+            
+            raw_assignments = vc_data.get("role_assignments", {})
+            assignments = {}
+            for k, v in raw_assignments.items():
+                if isinstance(v, list):
+                    assignments[k] = v
+                else:
+                    assignments[k] = [v] if v and v != "— Unassigned —" else []
 
+            all_people = vc_data["queue"] + vc_data["calypso"]
             st.markdown(f"**Assigning roles for:** *{active_song}*")
 
             def role_icon(role):
@@ -698,29 +707,97 @@ def render_vc_content(vc_id):
                 return "🎶"
 
             changed = False
+            war_triggered = False
             new_assignments = dict(assignments)
-            role_cols = st.columns(min(len(roles), 3))
-            for i, role in enumerate(roles):
-                col = role_cols[i % min(len(roles), 3)]
-                with col:
-                    assigned_person = assignments.get(role, "— Unassigned —")
-                    options = ["— Unassigned —"] + all_people
-                    cur_idx = options.index(assigned_person) if assigned_person in options else 0
-                    picked = st.selectbox(
-                        f"{role_icon(role)} {role}",
-                        options,
-                        index=cur_idx,
-                        key=f"{vc_id}_role_{role}_{active_song}_{st.session_state.rev}",
-                        disabled=not is_manager
-                    )
-                    if picked != assigned_person:
-                        changed = True
-                    if picked != "— Unassigned —":
-                        new_assignments[role] = picked
-                    elif role in new_assignments:
-                        del new_assignments[role]
 
-            if is_manager and changed:
+            for role in roles:
+                current_assigned = assignments.get(role, [])
+                war_btn_key = f"{vc_id}_war_{role}_{active_song}"
+                
+                row_col1, row_col2, row_col3 = st.columns([2, 3, 1])
+                
+                with row_col1:
+                    st.write("") 
+                    st.markdown(f"##### {role_icon(role)} {role}")
+                
+                with row_col2:
+                    # CRITICAL FIX: The multiselect key now incorporates st.session_state.rev
+                    # Changing st.session_state.rev completely destroys the widget cache memory, clearing out losers!
+                    picked_list = st.multiselect(
+                        f"Assign {role}",
+                        options=all_people,
+                        default=current_assigned,
+                        key=f"{vc_id}_role_multi_{role}_{active_song}_{st.session_state.rev}",
+                        disabled=not is_manager,
+                        label_visibility="collapsed"
+                    )
+                    if not war_triggered and set(picked_list) != set(current_assigned):
+                        changed = True
+                        new_assignments[role] = picked_list
+
+                with row_col3:
+                    war_disabled = (len(picked_list) < 2 or not is_manager)
+                    war_clicked = st.button("💥 War!", key=war_btn_key, disabled=war_disabled, use_container_width=True)
+
+                if war_clicked:
+                    war_triggered = True
+                    import random
+                    anime_gifs = [
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iqkCNZIzSSXSM/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6ULDGyRw0uhECEhAaQ/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/qLErpwsfLyY6RSTJlJ/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iRDkNp3c0FXem0lCCF/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3aWJ0Y2g2bGl0c2s0cm9nYWljbzEzZTJ1OXF4NDRmNWdjYmJsYWsxdSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/htHTvYB0l5Isw/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YTNlbjk5NnFrZzltNzNpcHBjazUwa3h4dHV4a2Z4NjZwdnI0bXltYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VDZDQWaCR2YhQ0qeUo/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azUyaTV4M3Q0bG9mdjN3bmxrd3hmeXRleGYzaHducmwxdDY3cXh0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QN7yjB1My4sNhzNTg4/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YXU0ZnR4dngxOWxxOWxhZDRmcHMyNGI3czM5ODV5eHNoMnV0MGpubyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mmp8mYjezjgfi1SXW9/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWp6ajJoc2MxNTAxdDc5aXcycXExenp3N3g3enVtOWljbmtpMjdlYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ecotXu1Vhklym7D8rG/giphy.gif"
+                    ]
+                    
+                    battle_placeholder = st.empty()
+                    chosen_anime = random.choice(anime_gifs)
+                    
+                    # UPDATED FIX: Run the countdown loop for exactly 5 seconds
+                    for timer in range(5, 0, -1):
+                        battle_placeholder.markdown(
+                            f"""
+                            <div style="text-align: center; padding: 15px; background-color: #0c0c0c; border: 3px dashed #ff4b4b; border-radius: 12px; margin: 15px 0;">
+                                <h2 style="color: #ff4b4b; margin: 0; font-family: sans-serif; text-shadow: 0 0 10px #ff0000;">🔥 ROLE WAR FOR {role.upper()}! 🔥</h2>
+                                <p style="font-size: 1.4rem; font-weight: bold; color: white;">Clashing finishes in {timer}...</p>
+                                <img src="{chosen_anime}" style="width: 100%; max-width: 450px; border-radius: 8px; border: 2px solid #fff;"/>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                        time.sleep(1.0)
+                    
+                    winner = random.choice(picked_list)
+                    battle_placeholder.empty()
+                    
+                    st.session_state[history_key].append({
+                        "selected_song": active_song,
+                        "role_assignments": dict(vc_data.get("role_assignments", {}))
+                    })
+                    
+                    # Update data payload
+                    new_assignments[role] = [winner]
+                    vc_data["role_assignments"] = new_assignments
+                    
+                    # CRITICAL FIX: Increment the state modifier key so front-end components discard the old user selections cache
+                    st.session_state.rev += 1
+                    
+                    save_state(vc_id, vc_data)
+                    
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                        
+                    st.toast(f"🏆 {winner} won the fight for {role}!")
+                    st.balloons()
+                    st.rerun()
+
+            if is_manager and changed and not war_triggered:
                 st.session_state[history_key].append({
                     "selected_song": active_song,
                     "role_assignments": dict(assignments)
@@ -737,8 +814,7 @@ def render_vc_content(vc_id):
             if is_manager:
                 clear_col, _ = st.columns([1, 3])
                 with clear_col:
-                    if st.button("🗑️ Clear Roles", use_container_width=True,
-                                 key=f"{vc_id}_role_clear"):
+                    if st.button("🗑️ Clear Roles", use_container_width=True, key=f"{vc_id}_role_clear"):
                         st.session_state[history_key].append({
                             "selected_song": active_song,
                             "role_assignments": dict(vc_data.get("role_assignments", {}))
