@@ -568,9 +568,10 @@ def render_vc_content(vc_id):
         history_key = f"{vc_id}_role_history"
         is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
 
-        # Searchable song selector & Spin button
+        # 1. Gather and Filter Song Lists
         song_list = list(EPIC_SONGS.keys())
         
+        # Row 1: Search box and Spin button
         spin_cols = st.columns([3, 1])
         with spin_cols[0]:
             search_query = st.text_input(
@@ -585,23 +586,21 @@ def render_vc_content(vc_id):
         filtered_songs_with_none = ["— Select a song —"] + filtered_songs
 
         with spin_cols[1]:
-            # Disable spin if the manager filtered down to nothing
             spin_disabled = not is_manager or len(filtered_songs) == 0
             spin_clicked = st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
 
-        current_song = vc_data.get("selected_song", "")
-        
-        # Handle Spin Logic with visual animation
+        # 2. Handle Spin Execution via State Bridge (Before selectbox renders)
+        spin_target_key = f"{vc_id}_spun_song_bridge"
         if spin_clicked and is_manager:
             import random
             
             spin_placeholder = st.empty()
-            # Flash random songs for a fun slot-machine style countdown animation
+            # Slot machine flash animation
             for speed in [0.05, 0.05, 0.1, 0.1, 0.2, 0.3]:
                 random_flash = random.choice(filtered_songs)
                 spin_placeholder.markdown(
                     f"""
-                    <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px;">
+                    <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px; margin-bottom: 10px;">
                         <h3 style="color: #ffaa00; margin: 0;">🎰 Spinning... 🎰</h3>
                         <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{random_flash}</b> ✨</p>
                     </div>
@@ -610,32 +609,42 @@ def render_vc_content(vc_id):
                 )
                 time.sleep(speed)
             
-            # Choose final winning song
-            chosen_song = random.choice(filtered_songs)
+            # Lock in winning selection and push to state bridge
+            winning_song = random.choice(filtered_songs)
             spin_placeholder.empty()
-            st.toast(f"🎯 Landed on: {chosen_song}!")
-        else:
-            # Otherwise, use whatever is currently selected in the dropdown
-            default_idx = (filtered_songs_with_none.index(current_song)
-                           if current_song in filtered_songs_with_none else 0)
+            st.session_state[spin_target_key] = winning_song
+            st.toast(f"🎯 Landed on: {winning_song}!")
 
-            chosen_song = st.selectbox(
-                "Song",
-                filtered_songs_with_none,
-                index=default_idx,
-                key=f"{vc_id}_song_select",
-                disabled=not is_manager,
-                label_visibility="collapsed"
-            )
+        # 3. Render Dropdown Menu (Synchronized perfectly with Spin result)
+        current_song = vc_data.get("selected_song", "")
+        
+        # Check if a spin just happened, otherwise read from database record
+        target_song = st.session_state.get(spin_target_key, current_song)
+        
+        default_idx = (filtered_songs_with_none.index(target_song)
+                       if target_song in filtered_songs_with_none else 0)
 
-        # Trigger state updates if a new song was chosen manually OR spun successfully
+        chosen_song = st.selectbox(
+            "Song",
+            filtered_songs_with_none,
+            index=default_idx,
+            key=f"{vc_id}_song_select",
+            disabled=not is_manager,
+            label_visibility="collapsed"
+        )
+
+        # Clear the state bridge once consumed by the selectbox index
+        if spin_target_key in st.session_state:
+            del st.session_state[spin_target_key]
+
+        # 4. Trigger State Updates and Cleanups on Song Change
         if is_manager and chosen_song != "— Select a song —" and chosen_song != current_song:
             st.session_state[history_key].append({
                 "selected_song": vc_data.get("selected_song", ""),
                 "role_assignments": dict(vc_data.get("role_assignments", {}))
             })
             vc_data["selected_song"] = chosen_song
-            vc_data["role_assignments"] = {}  # Reset assignments for the new song
+            vc_data["role_assignments"] = {}  # Clear roles out for fresh select
             save_state(vc_id, vc_data)
             if vc_id == "vc1":
                 st.session_state.vc1_data = vc_data
@@ -649,8 +658,6 @@ def render_vc_content(vc_id):
             
             raw_assignments = vc_data.get("role_assignments", {})
             assignments = {}
-            
-            # CRITICAL FORMAT SANITIZATION: Safely convert old single-selectbox string entries to list lists
             for k, v in raw_assignments.items():
                 if isinstance(v, list):
                     assignments[k] = v
@@ -681,7 +688,7 @@ def render_vc_content(vc_id):
             for role in roles:
                 current_assigned = assignments.get(role, [])
                 
-                # SAFEGUARD FIX: Clean out anyone who left the queue/calypso pool
+                # SAFEGUARD FIX: Instantly strip away anyone who disconnected or left the channel pool
                 default_assigned = [person for person in current_assigned if person in all_people]
                 
                 if len(default_assigned) != len(current_assigned):
@@ -715,8 +722,20 @@ def render_vc_content(vc_id):
                 if war_clicked:
                     war_triggered = True
                     import random
+                    
+                    # YOUR FULL ORIGINAL ANIME GIF POOL RECONSTITUTED
                     anime_gifs = [
-                        "https://media.giphy.com/media/iqkCNZIzSSXSM/giphy.gif"
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iqkCNZIzSSXSM/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6ULDGyRw0uhECEhAaQ/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/qLErpwsfLyY6RSTJlJ/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iRDkNp3c0FXem0lCCF/giphy.gif",
+                        "https://tenor.com/n37Q1sMavJa.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YTNlbjk5NnFrZzltNzNpcHBjazUwa3h4dHV4a2Z4NjZwdnI0bXltYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VDZDQWaCR2YhQ0qeUo/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azUyaTV4M3Q0bG9mdjN3bmxrd3hmeXRleGYzaHducmwxdDY3cXh0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QN7yjB1My4sNhzNTg4/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YXU0ZnR4dngxOWxxOWxhZDRmcHMyNGI3czM5ODV5eHNoMnV0MGpubyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mmp8mYjezjgfi1SXW9/giphy.gif",
+                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWp6ajJoc2MxNTAxdDc5aXcycXExenp3N3g3enVtOWljbmtpMjdlYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ecotXu1Vhklym7D8rG/giphy.gif",
+                        "https://tenor.com/bOIOd.gif",
+                        "https://tenor.com/bCn8l.gif"
                     ]
                     
                     battle_placeholder = st.empty()
@@ -797,6 +816,7 @@ def render_vc_content(vc_id):
                 st.info("Search, select, or spin a song above to assign roles.")
             else:
                 st.info("The manager hasn't selected a song yet.")
+                
 # Render selected section
 if selected_tab == "🎵 VC 1":
     render_vc_content("vc1")
