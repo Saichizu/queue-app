@@ -65,7 +65,7 @@ if not os.path.exists(TEMPLATES_DIR):
 DEFAULT_TEMPLATE = {
     "name": "Default EPIC",
     "title": "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭",
-    "url": "https://epic-queue.streamlit.app",
+    "url": "<https://epic-queue.streamlit.app>",
     "currently_singing": "𝑪𝑼𝑹𝑹𝑬𝑵𝑻𝑳𝒀 𝑺𝑰𝑵𝑮𝑰𝑵𝑮",
     "current_symbol": "👑",
     "next_up": "𝑵𝑬𝑿𝑻 𝑼𝑷",
@@ -75,7 +75,7 @@ DEFAULT_TEMPLATE = {
     "away_calypso": "𝑨𝒘𝒂𝒚 𝒘𝒊𝒕𝒉 𝑪𝒂𝒍𝒚𝒑𝒔𝒐",
     "calypso_symbol": "🌴",
     "reactions": ":cheese: — Join the Queue\n:mouse_trap: — Leave the Queue\n📣 — Summon the Bard (Ping)\n⏳ — Place Me On Hold",
-    "wheel_link": "https://wheelofnames.com/jr7-eaa"
+    "wheel_link": "<https://wheelofnames.com/jr7-eaa>"
 }
 
 def load_state(vc_id):
@@ -567,115 +567,44 @@ def render_vc_content(vc_id):
 
         history_key = f"{vc_id}_role_history"
         is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
+
+        # Searchable song selector
         song_list = list(EPIC_SONGS.keys())
+        search_query = st.text_input(
+            "🔍 Search song",
+            key=f"{vc_id}_song_search",
+            placeholder="Type to filter songs...",
+            disabled=not is_manager
+        )
+        filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
+        filtered_songs_with_none = ["— Select a song —"] + filtered_songs
 
-        # --- STEP 1: Process Wheel Spin State Before Rendering Layout ---
-        spin_triggered = False
-        
-        if is_manager and st.session_state.get(f"{vc_id}_spin_btn"):
-            import random
-            spinner_placeholder = st.empty()
-            spin_durations = [0.05] * 10 + [0.1] * 5 + [0.2] * 3 + [0.4] * 1
-            
-            for duration in spin_durations:
-                temp_song = random.choice(song_list)
-                spinner_placeholder.markdown(
-                    f"""
-                    <div style="text-align: center; padding: 12px; background-color: #1e1e1e; border-radius: 8px; border: 2px solid #ff4b4b; margin-bottom: 15px;">
-                        <h4 style="color: #ff4b4b; margin: 0; font-family: sans-serif;">🎡 Spinning Wheel...</h4>
-                        <p style="font-size: 1.1rem; font-weight: bold; margin: 6px 0 0 0; color: white; font-family: sans-serif;">{temp_song}</p>
-                    </div>
-                    """, 
-                    unsafe_allow_html=True
-                )
-                time.sleep(duration)
-                
-            winning_song = random.choice(song_list)
-            spinner_placeholder.empty()
-            
-            st.session_state[history_key].append({
-                "selected_song": vc_data.get("selected_song", ""),
-                "role_assignments": dict(vc_data.get("role_assignments", {}))
-            })
-            
-            vc_data["selected_song"] = winning_song
-            vc_data["role_assignments"] = {} 
-            active_song = winning_song
-            save_state(vc_id, vc_data)
-            
-            if vc_id == "vc1":
-                st.session_state.vc1_data = vc_data
-            else:
-                st.session_state.vc2_data = vc_data
-                
-            st.session_state[f"{vc_id}_song_select"] = winning_song
-            spin_triggered = True
+        current_song = vc_data.get("selected_song", "")
+        default_idx = (filtered_songs_with_none.index(current_song)
+                       if current_song in filtered_songs_with_none else 0)
 
-        # --- STEP 2: Render Inputs and Controls Layout ---
-        control_col1, control_col2 = st.columns([3, 1])
-        
-        with control_col1:
-            search_query = st.text_input(
-                "🔍 Search song",
-                key=f"{vc_id}_song_search",
-                placeholder="Type to filter songs...",
-                disabled=not is_manager
-            )
-            
-            filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
-            filtered_songs_with_none = ["— Select a song —"] + filtered_songs
+        chosen_song = st.selectbox(
+            "Song",
+            filtered_songs_with_none,
+            index=default_idx,
+            key=f"{vc_id}_song_select",
+            disabled=not is_manager,
+            label_visibility="collapsed"
+        )
 
-            current_song = vc_data.get("selected_song", "")
-            if not current_song or current_song not in filtered_songs_with_none:
-                default_idx = 0
-            else:
-                default_idx = filtered_songs_with_none.index(current_song)
-
-            chosen_song = st.selectbox(
-                "Song",
-                filtered_songs_with_none,
-                index=default_idx,
-                key=f"{vc_id}_song_select",
-                disabled=not is_manager,
-                label_visibility="collapsed"
-            )
-
-        with control_col2:
-            st.write("") 
-            st.write("")
-            st.button("🎰 Spin!", use_container_width=True, key=f"{vc_id}_spin_btn", disabled=not is_manager)
-
-        # --- STEP 3: Handle Dropdown Selection Event Changes ---
-        if is_manager and not spin_triggered and chosen_song != "— Select a song —" and chosen_song != current_song:
+        if is_manager and chosen_song != "— Select a song —" and chosen_song != current_song:
             st.session_state[history_key].append({
                 "selected_song": vc_data.get("selected_song", ""),
                 "role_assignments": dict(vc_data.get("role_assignments", {}))
             })
             vc_data["selected_song"] = chosen_song
             vc_data["role_assignments"] = {}
-            active_song = chosen_song
             save_state(vc_id, vc_data)
             if vc_id == "vc1":
                 st.session_state.vc1_data = vc_data
             else:
                 st.session_state.vc2_data = vc_data
             st.rerun()
-
-        if spin_triggered:
-            st.balloons()
-            st.rerun()
-
-        # --- STEP 4: Render Choice Badge ---
-        if active_song:
-            st.markdown(
-                f"""
-                <div style="text-align: center; padding: 12px; background-color: #1e1e1e; border-radius: 8px; border: 2px solid #28a745; margin-top: 20px; margin-bottom: 20px;">
-                    <h4 style="color: #28a745; margin: 0; font-family: sans-serif;">🎯 Current Selection</h4>
-                    <p style="font-size: 1.1rem; font-weight: bold; margin: 6px 0 0 0; color: white; font-family: sans-serif;">{active_song}</p>
-                </div>
-                """, 
-                unsafe_allow_html=True
-            )
 
         # --- STEP 5: Vertical Role Assignment Matrix with Multiselect & War ---
         if active_song and active_song in EPIC_SONGS:
@@ -683,6 +612,8 @@ def render_vc_content(vc_id):
             
             raw_assignments = vc_data.get("role_assignments", {})
             assignments = {}
+            
+            # CRITICAL FORMAT SANITIZATION: Convert old selectbox string data smoothly to list objects
             for k, v in raw_assignments.items():
                 if isinstance(v, list):
                     assignments[k] = v
@@ -713,11 +644,9 @@ def render_vc_content(vc_id):
             for role in roles:
                 current_assigned = assignments.get(role, [])
                 
-                # SAFEGUARD FIX: Clean out anyone who left the queue/calypso voice pool
-                # This prevents Streamlit from raising a StreamlitAPIException due to unmatched default values
+                # SAFEGUARD FIX: Clean out anyone who left the queue/calypso pool
                 default_assigned = [person for person in current_assigned if person in all_people]
                 
-                # Sync back adjustments downstream if anyone was stripped/left
                 if len(default_assigned) != len(current_assigned):
                     changed = True
                     new_assignments[role] = default_assigned
@@ -738,7 +667,6 @@ def render_vc_content(vc_id):
                         disabled=not is_manager,
                         label_visibility="collapsed"
                     )
-                    # Safely handle dropdown updates only if a backend War state is not settling
                     if not war_triggered and set(picked_list) != set(default_assigned):
                         changed = True
                         new_assignments[role] = picked_list
@@ -767,7 +695,7 @@ def render_vc_content(vc_id):
                     battle_placeholder = st.empty()
                     chosen_anime = random.choice(anime_gifs)
                     
-                    # Run countdown loops for exactly 5 seconds
+                    # 5 Second Countdown
                     for timer in range(5, 0, -1):
                         battle_placeholder.markdown(
                             f"""
@@ -789,13 +717,9 @@ def render_vc_content(vc_id):
                         "role_assignments": dict(vc_data.get("role_assignments", {}))
                     })
                     
-                    # Update database with only the single winner kept inside the list assignment
                     new_assignments[role] = [winner]
                     vc_data["role_assignments"] = new_assignments
-                    
-                    # Increment key revision to force multi-select UI widgets to dump their user-selection cache memory
                     st.session_state.rev += 1
-                    
                     save_state(vc_id, vc_data)
                     
                     if vc_id == "vc1":
