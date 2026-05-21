@@ -467,6 +467,94 @@ def render_vc_content(vc_id):
     # ----------- Layout: Reorder + Output -----------
     if vc_data["queue"]:
 
+        # ========== QUEUE MANAGER ==========
+        st.markdown("---")
+        st.markdown("### Queue Manager")
+
+        # Build reverse map: person → list of roles assigned to them
+        role_assignments = vc_data.get("role_assignments", {})
+        person_to_roles = {}
+        for role, person in role_assignments.items():
+            person_to_roles.setdefault(person, []).append(role)
+
+        def fmt_name(name):
+            """Format name with ping indicator and assigned roles."""
+            base = f"{name} 📣" if name in vc_data["pinged"] else name
+            roles_for = person_to_roles.get(name, [])
+            if roles_for:
+                base += " [" + ", ".join(roles_for) + "]"
+            return base
+
+        def fmt_name_plain(name):
+            """Format name for output text (no ping icon, just roles)."""
+            ping = " 📣" if name in vc_data["pinged"] else ""
+            roles_for = person_to_roles.get(name, [])
+            role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
+            return f"{name}{ping}{role_tag}"
+
+        # Reorder column shows names with their assigned roles inline
+        left, right = st.columns([1, 2])
+        with left:
+            st.markdown("#### 🔀 Reorder")
+            if st.session_state[current_user_key] == vc_data["current_manager"]:
+                # --- CHANGE THIS LINE TO REMOVE ROLES FROM REORDER LIST ---
+                display_items = [f"{p} 📣" if p in vc_data["pinged"] else p for p in vc_data["queue"]]
+
+                # Force sortable to refresh whenever queue length/content changes
+                sortable_key = f"sortable_{vc_id}_{len(vc_data['queue'])}_{hash(tuple(vc_data['queue']))}_{st.session_state.rev}"
+
+                reordered_display = sortables.sort_items(
+                    display_items,
+                    direction="vertical",
+                    key=sortable_key
+                )
+                # --- CHANGE THIS LINE TO MAP THE CLEAN DISPLAY BACK TO REAL NAMES ---
+                display_to_name = {
+                    (f"{p} 📣" if p in vc_data["pinged"] else p): p for p in vc_data["queue"]
+                }
+                
+                reordered_names = [display_to_name.get(d, d) for d in reordered_display]
+                if reordered_names != vc_data["queue"]:
+                    vc_data["queue"] = reordered_names
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
+            else:
+                st.info("🔹 Only the manager can reorder.")
+
+        with right:
+            current_template = load_template(vc_data["current_template"])
+
+            output = f"{current_template['title']}\n"
+            output += f"{current_template['url']}\n"
+            output += f"Template by: {vc_data['current_template']}\n"
+            output += f"Managed by: {vc_data['current_manager'] if vc_data['current_manager'] else '-'}\n"
+            if active_song:
+                output += f"🎵 {active_song}\n"
+            output += "-# ------------------\n"
+            output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name_plain(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
+            output += "-# ------------------\n"
+            output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name_plain(vc_data['queue'][1]) if len(vc_data['queue'])>=2 else '-'}\n"
+            output += "-# ------------------\n" + current_template['on_queue'] + "\n"
+            if len(vc_data["queue"]) > 2:
+                for person in vc_data["queue"][2:]:
+                    output += f"{current_template['queue_symbol']} {fmt_name_plain(person)}\n"
+            else:
+                output += "- None\n"
+            output += "-# ------------------\n" + current_template['away_calypso'] + "\n"
+            if vc_data["calypso"]:
+                for person in vc_data["calypso"]:
+                    output += f"{current_template['calypso_symbol']} {fmt_name_plain(person)}\n"
+            else:
+                output += "- None\n"
+            output += "-# ------------------\nReact to join the legend:\n" + current_template['reactions'] + "\n"
+            output += "-# ------------------\n"
+            output += f"{current_template['wheel_link']}\n"
+            st.code(output, language="text")
+
         # ========== SONG & ROLE ASSIGNMENT ==========
         st.markdown("---")
         st.markdown("### 🎵 Song & Role Assignment")
@@ -606,169 +694,7 @@ def render_vc_content(vc_id):
                 st.info("Search and select a song above to assign roles.")
             else:
                 st.info("The manager hasn't selected a song yet.")
-
-        # ========== QUEUE MANAGER ==========
-        st.markdown("---")
-        st.markdown("### Queue Manager")
-
-        # Build reverse map: person → list of roles assigned to them
-        role_assignments = vc_data.get("role_assignments", {})
-        person_to_roles = {}
-        for role, person in role_assignments.items():
-            person_to_roles.setdefault(person, []).append(role)
-
-        def fmt_name(name):
-            """Format name with ping indicator and assigned roles."""
-            base = f"{name} 📣" if name in vc_data["pinged"] else name
-            roles_for = person_to_roles.get(name, [])
-            if roles_for:
-                base += " [" + ", ".join(roles_for) + "]"
-            return base
-
-        def fmt_name_plain(name):
-            """Format name for output text (no ping icon, just roles)."""
-            ping = " 📣" if name in vc_data["pinged"] else ""
-            roles_for = person_to_roles.get(name, [])
-            role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
-            return f"{name}{ping}{role_tag}"
-
-        # Reorder column shows names with their assigned roles inline
-        left, right = st.columns([1, 2])
-        with left:
-            st.markdown("#### 🔀 Reorder")
-            if st.session_state[current_user_key] == vc_data["current_manager"]:
-                # --- CHANGE THIS LINE TO REMOVE ROLES FROM REORDER LIST ---
-                display_items = [f"{p} 📣" if p in vc_data["pinged"] else p for p in vc_data["queue"]]
-
-                # Force sortable to refresh whenever queue length/content changes
-                sortable_key = f"sortable_{vc_id}_{len(vc_data['queue'])}_{hash(tuple(vc_data['queue']))}_{st.session_state.rev}"
-
-                reordered_display = sortables.sort_items(
-                    display_items,
-                    direction="vertical",
-                    key=sortable_key
-                )
-                # --- CHANGE THIS LINE TO MAP THE CLEAN DISPLAY BACK TO REAL NAMES ---
-                display_to_name = {
-                    (f"{p} 📣" if p in vc_data["pinged"] else p): p for p in vc_data["queue"]
-                }
-                
-                reordered_names = [display_to_name.get(d, d) for d in reordered_display]
-                if reordered_names != vc_data["queue"]:
-                    vc_data["queue"] = reordered_names
-                    save_state(vc_id, vc_data)
-                    if vc_id == "vc1":
-                        st.session_state.vc1_data = vc_data
-                    else:
-                        st.session_state.vc2_data = vc_data
-                    st.rerun()
-            else:
-                st.info("🔹 Only the manager can reorder.")
-
-        with right:
-            current_template = load_template(vc_data["current_template"])
-
-            output = f"{current_template['title']}\n"
-            output += f"{current_template['url']}\n"
-            output += f"Template by: {vc_data['current_template']}\n"
-            output += f"Managed by: {vc_data['current_manager'] if vc_data['current_manager'] else '-'}\n"
-            if active_song:
-                output += f"🎵 {active_song}\n"
-            output += "-# ------------------\n"
-            output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name_plain(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
-            output += "-# ------------------\n"
-            output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name_plain(vc_data['queue'][1]) if len(vc_data['queue'])>=2 else '-'}\n"
-            output += "-# ------------------\n" + current_template['on_queue'] + "\n"
-            if len(vc_data["queue"]) > 2:
-                for person in vc_data["queue"][2:]:
-                    output += f"{current_template['queue_symbol']} {fmt_name_plain(person)}\n"
-            else:
-                output += "- None\n"
-            output += "-# ------------------\n" + current_template['away_calypso'] + "\n"
-            if vc_data["calypso"]:
-                for person in vc_data["calypso"]:
-                    output += f"{current_template['calypso_symbol']} {fmt_name_plain(person)}\n"
-            else:
-                output += "- None\n"
-            output += "-# ------------------\nReact to join the legend:\n" + current_template['reactions'] + "\n"
-            output += "-# ------------------\n"
-            output += f"{current_template['wheel_link']}\n"
-            st.code(output, language="text")
-
-        # ----------- Compact Queue Card -----------
-        st.markdown(
-            """
-            <style>
-            .queue-card {
-                max-width: 520px;
-                margin: 30px auto 50px;
-                background: linear-gradient(135deg, #1e1330 0%, #301b3f 60%, #3a1b3a 100%);
-                color: #ffffff;
-                border-radius: 18px;
-                padding: 22px;
-                box-shadow: 0 8px 25px rgba(40,20,80,0.4), inset 0 1px 0 rgba(255,255,255,0.05);
-                font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            }
-            .qc-head { display:flex; justify-content:space-between; align-items:flex-start; }
-            .qc-title { font-size:20px; font-weight:700; letter-spacing:0.6px; }
-            .qc-managed { font-size:12px; opacity:0.8; }
-            .who { font-size:16px; font-weight:700; }
-            .qc-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
-            .qc-box { background:rgba(255,255,255,0.05); border-radius:10px; padding:10px; }
-            .label { font-size:11px; color:#d7cfff; font-weight:700; margin-bottom:6px; display:block; }
-            .badge { background:rgba(255,255,255,0.1); padding:5px 8px; border-radius:8px; font-size:13px; display:inline-block; margin:3px; }
-            .foot { font-size:11px; color:rgba(255,255,255,0.7); margin-top:10px; text-align:center; }
-            </style>
-            """,
-            unsafe_allow_html=True
-        )
-
-        def fmt_card_name(name):
-            ping = "📣 " if name in vc_data["pinged"] else ""
-            roles_for = person_to_roles.get(name, [])
-            role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
-            return f"{ping}{name}{role_tag}"
-
-        now_name = fmt_card_name(vc_data["queue"][0]) if len(vc_data["queue"]) >= 1 else "-"
-        next_name = fmt_card_name(vc_data["queue"][1]) if len(vc_data["queue"]) >= 2 else "-"
-
-        queue_items_html = "".join(
-            f'<div class="badge">🎭 {fmt_card_name(n)}</div>' for n in vc_data["queue"][2:]
-        ) if len(vc_data["queue"]) > 2 else '<div class="badge">—</div>'
-
-        calypso_items_html = "".join(
-            f'<div class="badge">🌴 {fmt_card_name(n)}</div>' for n in vc_data["calypso"]
-        ) if vc_data["calypso"] else '<div class="badge">—</div>'
-
-        card_html = f"""
-        <div class="queue-card">
-            <div class="qc-head">
-                <div>
-                    <div class="qc-title">🎵 EPIC Song Queue</div>
-                    <div class="qc-managed">Managed by {vc_data['current_manager'] or '-'}</div>
-                </div>
-                <div style="text-align:right;">
-                    <div style="font-size:12px;color:#f5e6ff;">Now</div>
-                    <div class="who">{now_name}</div>
-                    <div style="font-size:12px;color:#f5e6ff;margin-top:6px;">Next</div>
-                    <div class="who">{next_name}</div>
-                </div>
-            </div>
-            <div class="qc-grid">
-                <div class="qc-box">
-                    <span class="label">🛶 On Queue</span>
-                    {queue_items_html}
-                </div>
-                <div class="qc-box">
-                    <span class="label">🏝️ Away with Calypso</span>
-                    {calypso_items_html}
-                </div>
-            </div>
-            <div class="foot">Share this card by screenshot — the text queue above remains for copy/paste.</div>
-        </div>
-        """
-        st.markdown(card_html, unsafe_allow_html=True)
-
+        
 # Render selected section
 if selected_tab == "🎵 VC 1":
     render_vc_content("vc1")
