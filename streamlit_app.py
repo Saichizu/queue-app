@@ -7,6 +7,50 @@ from datetime import datetime
 import requests
 import time
 
+# ========== EPIC THE MUSICAL SONG DATA ==========
+EPIC_SONGS = {
+    "The Horse and the Infant": ["Odysseus", "Zeus", "Soldiers", "Infant Astyanax"],
+    "Just a Man": ["Odysseus", "Zeus", "Ensemble"],
+    "Full Speed Ahead": ["Odysseus", "Eurylochus", "Polites", "Crew"],
+    "Open Arms": ["Polites", "Odysseus", "Lotus Eaters"],
+    "Warrior of the Mind": ["Athena", "Young Odysseus", "Ensemble"],
+    "Polyphemus": ["Odysseus", "Polyphemus", "Eurylochus", "Crew"],
+    "Survive": ["Odysseus", "Polyphemus", "Crew"],
+    "Remember Them": ["Odysseus", "Athena", "Polyphemus", "Crew"],
+    "My Goodbye": ["Athena", "Odysseus"],
+    "Storm": ["Odysseus", "Crew", "Poseidon"],
+    "Luck Runs Out": ["Eurylochus", "Odysseus", "Crew"],
+    "Keep Your Friends Close": ["Aeolus", "Odysseus", "Winions", "Crew"],
+    "Ruthlessness": ["Poseidon", "Odysseus", "Crew"],
+    "Puppeteer": ["Circe", "Odysseus", "Enchanted Crew"],
+    "Wouldn't You Like": ["Hermes", "Odysseus"],
+    "Done For": ["Circe", "Odysseus"],
+    "There Are Other Ways": ["Circe", "Odysseus"],
+    "The Underworld": ["Odysseus", "Dead Souls", "Anticlea", "Prophet Spirits"],
+    "No Longer You": ["Tiresias", "Odysseus"],
+    "Monster": ["Odysseus", "Ensemble"],
+    "Suffering": ["Siren Penelope", "Odysseus", "Sirens"],
+    "Different Beast": ["Odysseus", "Crew", "Sirens"],
+    "Scylla": ["Odysseus", "Scylla", "Crew"],
+    "Mutiny": ["Eurylochus", "Odysseus", "Crew"],
+    "Thunder Bringer": ["Zeus", "Odysseus", "Crew"],
+    "Legendary": ["Telemachus", "Suitors", "Ensemble"],
+    "Little Wolf": ["Athena", "Telemachus", "Antinous"],
+    "We'll Be Fine": ["Athena", "Telemachus"],
+    "Love in Paradise": ["Calypso", "Odysseus"],
+    "God Games": ["Athena", "Zeus", "Hera", "Aphrodite", "Ares", "Apollo", "Hephaestus"],
+    "Not Sorry for Loving You": ["Calypso", "Odysseus"],
+    "Dangerous": ["Hermes", "Odysseus"],
+    "Charybdis": ["Odysseus", "Charybdis"],
+    "Get in the Water": ["Poseidon", "Odysseus"],
+    "Six Hundred Strike": ["Odysseus", "Poseidon", "Crew Spirits"],
+    "The Challenge": ["Penelope", "Suitors", "Telemachus"],
+    "Hold Them Down": ["Antinous", "Suitors"],
+    "Odysseus": ["Odysseus", "Suitors", "Telemachus"],
+    "I Can't Help but Wonder": ["Odysseus", "Telemachus"],
+    "Would You Fall in Love with Me Again": ["Odysseus", "Penelope"],
+}
+
 SAVE_FILE = "queue.json"
 TEMPLATES_DIR = "templates"
 ADMIN_PASSCODE = "531246"
@@ -45,7 +89,9 @@ def load_state(vc_id):
             "pinged": set(data.get("pinged", [])),
             "current_manager": data.get("current_manager", ""),
             "current_template": data.get("current_template", "Default EPIC"),
-            "last_modified": data.get("last_modified", 0)
+            "last_modified": data.get("last_modified", 0),
+            "selected_song": data.get("selected_song", ""),
+            "role_assignments": data.get("role_assignments", {}),
         }
     return {
         "queue": [],
@@ -53,7 +99,9 @@ def load_state(vc_id):
         "pinged": set(),
         "current_manager": "",
         "current_template": "Default EPIC",
-        "last_modified": time.time()
+        "last_modified": time.time(),
+        "selected_song": "",
+        "role_assignments": {},
     }
 
 def save_state(vc_id, state):
@@ -65,7 +113,9 @@ def save_state(vc_id, state):
         "pinged": list(state["pinged"]),
         "current_manager": state["current_manager"],
         "current_template": state["current_template"],
-        "last_modified": time.time()
+        "last_modified": time.time(),
+        "selected_song": state.get("selected_song", ""),
+        "role_assignments": state.get("role_assignments", {}),
     }
     with open(save_file, "w", encoding="utf-8") as f:
         json.dump(data, f)
@@ -134,6 +184,8 @@ if "initialized" not in st.session_state:
     st.session_state.admin_authenticated = False
     for flag in ["show_leave", "show_hold", "show_return", "show_ping"]:
         st.session_state[flag] = False
+    st.session_state.vc1_role_history = []
+    st.session_state.vc2_role_history = []
 
 # Auto-refresh for non-managers
 is_manager_vc1 = st.session_state.current_user_vc1 == st.session_state.vc1_data["current_manager"]
@@ -251,6 +303,11 @@ def render_vc_content(vc_id):
                 if vc_data["queue"]:
                     first = vc_data["queue"].pop(0)
                     vc_data["queue"].append(first)
+                    # Clear role assignments and song on advance
+                    vc_data["selected_song"] = ""
+                    vc_data["role_assignments"] = {}
+                    history_key = f"{vc_id}_role_history"
+                    st.session_state[history_key] = []
                     save_state(vc_id, vc_data)
                     if vc_id == "vc1":
                         st.session_state.vc1_data = vc_data
@@ -409,18 +466,193 @@ def render_vc_content(vc_id):
 
     # ----------- Layout: Reorder + Output -----------
     if vc_data["queue"]:
+
+        # ========== SONG & ROLE ASSIGNMENT ==========
+        st.markdown("---")
+        st.markdown("### 🎵 Song & Role Assignment")
+
+        history_key = f"{vc_id}_role_history"
+        is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
+
+        # Searchable song selector
+        song_list = list(EPIC_SONGS.keys())
+        search_query = st.text_input(
+            "🔍 Search song",
+            key=f"{vc_id}_song_search",
+            placeholder="Type to filter songs...",
+            disabled=not is_manager
+        )
+        filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
+        filtered_songs_with_none = ["— Select a song —"] + filtered_songs
+
+        current_song = vc_data.get("selected_song", "")
+        default_idx = (filtered_songs_with_none.index(current_song)
+                       if current_song in filtered_songs_with_none else 0)
+
+        chosen_song = st.selectbox(
+            "Song",
+            filtered_songs_with_none,
+            index=default_idx,
+            key=f"{vc_id}_song_select",
+            disabled=not is_manager,
+            label_visibility="collapsed"
+        )
+
+        if is_manager and chosen_song != "— Select a song —" and chosen_song != current_song:
+            st.session_state[history_key].append({
+                "selected_song": vc_data.get("selected_song", ""),
+                "role_assignments": dict(vc_data.get("role_assignments", {}))
+            })
+            vc_data["selected_song"] = chosen_song
+            vc_data["role_assignments"] = {}
+            save_state(vc_id, vc_data)
+            if vc_id == "vc1":
+                st.session_state.vc1_data = vc_data
+            else:
+                st.session_state.vc2_data = vc_data
+            st.rerun()
+
+        active_song = vc_data.get("selected_song", "")
+
+        if active_song and active_song in EPIC_SONGS:
+            roles = EPIC_SONGS[active_song]
+            assignments = dict(vc_data.get("role_assignments", {}))
+            all_people = vc_data["queue"] + vc_data["calypso"]
+
+            st.markdown(f"**Assigning roles for:** *{active_song}*")
+
+            # Role assignment — each role has a selectbox, icon varies by role type
+            def role_icon(role):
+                r = role.lower()
+                if any(x in r for x in ["zeus", "poseidon", "athena", "hermes", "hera", "aphrodite", "ares", "apollo", "hephaestus"]):
+                    return "⚡"
+                if any(x in r for x in ["odysseus", "telemachus", "penelope", "antinous"]):
+                    return "⚔️"
+                if any(x in r for x in ["circe", "calypso", "siren", "scylla", "charybdis"]):
+                    return "🌊"
+                if any(x in r for x in ["crew", "ensemble", "suitors", "soldiers", "souls", "spirits"]):
+                    return "👥"
+                if any(x in r for x in ["polyphemus", "cyclops", "monster", "beast"]):
+                    return "👁️"
+                return "🎶"
+
+            changed = False
+            new_assignments = dict(assignments)
+            role_cols = st.columns(min(len(roles), 3))
+            for i, role in enumerate(roles):
+                col = role_cols[i % min(len(roles), 3)]
+                with col:
+                    assigned_person = assignments.get(role, "— Unassigned —")
+                    options = ["— Unassigned —"] + all_people
+                    cur_idx = options.index(assigned_person) if assigned_person in options else 0
+                    picked = st.selectbox(
+                        f"{role_icon(role)} {role}",
+                        options,
+                        index=cur_idx,
+                        # --- CHANGE: Append the rev counter to the key ---
+                        key=f"{vc_id}_role_{role}_{active_song}_{st.session_state.rev}",
+                        disabled=not is_manager
+                    )
+                    if picked != assigned_person:
+                        changed = True
+                    if picked != "— Unassigned —":
+                        new_assignments[role] = picked
+                    elif role in new_assignments:
+                        del new_assignments[role]
+
+            if is_manager and changed:
+                st.session_state[history_key].append({
+                    "selected_song": active_song,
+                    "role_assignments": dict(assignments)
+                })
+                vc_data["role_assignments"] = new_assignments
+                save_state(vc_id, vc_data)
+                if vc_id == "vc1":
+                    st.session_state.vc1_data = vc_data
+                else:
+                    st.session_state.vc2_data = vc_data
+                st.rerun()
+
+            # Undo + Clear buttons
+            if is_manager:
+                clear_col, _ = st.columns([1, 3])
+                with clear_col:
+                    if st.button("🗑️ Clear Roles", use_container_width=True,
+                                 key=f"{vc_id}_role_clear"):
+                        # Save current state to history before wiping
+                        st.session_state[history_key].append({
+                            "selected_song": active_song,
+                            "role_assignments": dict(vc_data.get("role_assignments", {}))
+                        })
+                        
+                        # 1. Clean out the backend dictionary completely
+                        vc_data["role_assignments"] = {}
+                        
+                        # 2. Update a revision flag to force Streamlit to rebuild the dropdowns
+                        # We'll use the existing st.session_state.rev counter
+                        st.session_state.rev += 1
+                        
+                        # Save and force a clean rerun
+                        save_state(vc_id, vc_data)
+                        if vc_id == "vc1":
+                            st.session_state.vc1_data = vc_data
+                        else:
+                            st.session_state.vc2_data = vc_data
+                        st.rerun()
+        elif active_song:
+            st.info("Song not found in database.")
+        else:
+            if is_manager:
+                st.info("Search and select a song above to assign roles.")
+            else:
+                st.info("The manager hasn't selected a song yet.")
+
+        # ========== QUEUE MANAGER ==========
+        st.markdown("---")
         st.markdown("### Queue Manager")
+
+        # Build reverse map: person → list of roles assigned to them
+        role_assignments = vc_data.get("role_assignments", {})
+        person_to_roles = {}
+        for role, person in role_assignments.items():
+            person_to_roles.setdefault(person, []).append(role)
+
+        def fmt_name(name):
+            """Format name with ping indicator and assigned roles."""
+            base = f"{name} 📣" if name in vc_data["pinged"] else name
+            roles_for = person_to_roles.get(name, [])
+            if roles_for:
+                base += " [" + ", ".join(roles_for) + "]"
+            return base
+
+        def fmt_name_plain(name):
+            """Format name for output text (no ping icon, just roles)."""
+            ping = " 📣" if name in vc_data["pinged"] else ""
+            roles_for = person_to_roles.get(name, [])
+            role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
+            return f"{name}{ping}{role_tag}"
+
+        # Reorder column shows names with their assigned roles inline
         left, right = st.columns([1, 2])
         with left:
             st.markdown("#### 🔀 Reorder")
             if st.session_state[current_user_key] == vc_data["current_manager"]:
-                reordered = sortables.sort_items(
-                    vc_data["queue"],
+                # --- CHANGE THIS LINE TO REMOVE ROLES FROM REORDER LIST ---
+                display_items = [f"{p} 📣" if p in vc_data["pinged"] else p for p in vc_data["queue"]]
+                
+                reordered_display = sortables.sort_items(
+                    display_items,
                     direction="vertical",
                     key=f"sortable_{vc_id}_{st.session_state.rev}"
                 )
-                if reordered != vc_data["queue"]:
-                    vc_data["queue"] = reordered
+                # --- CHANGE THIS LINE TO MAP THE CLEAN DISPLAY BACK TO REAL NAMES ---
+                display_to_name = {
+                    (f"{p} 📣" if p in vc_data["pinged"] else p): p for p in vc_data["queue"]
+                }
+                
+                reordered_names = [display_to_name.get(d, d) for d in reordered_display]
+                if reordered_names != vc_data["queue"]:
+                    vc_data["queue"] = reordered_names
                     save_state(vc_id, vc_data)
                     if vc_id == "vc1":
                         st.session_state.vc1_data = vc_data
@@ -429,30 +661,30 @@ def render_vc_content(vc_id):
                     st.rerun()
             else:
                 st.info("🔹 Only the manager can reorder.")
+
         with right:
             current_template = load_template(vc_data["current_template"])
-            
-            def fmt_name(name):
-                return f"{name} 📣" if name in vc_data["pinged"] else name
-            
+
             output = f"{current_template['title']}\n"
             output += f"{current_template['url']}\n"
             output += f"Template by: {vc_data['current_template']}\n"
             output += f"Managed by: {vc_data['current_manager'] if vc_data['current_manager'] else '-'}\n"
+            if active_song:
+                output += f"🎵 {active_song}\n"
             output += "-# ------------------\n"
-            output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
+            output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name_plain(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
             output += "-# ------------------\n"
-            output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name(vc_data['queue'][1]) if len(vc_data['queue'])>=2 else '-'}\n"
+            output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name_plain(vc_data['queue'][1]) if len(vc_data['queue'])>=2 else '-'}\n"
             output += "-# ------------------\n" + current_template['on_queue'] + "\n"
             if len(vc_data["queue"]) > 2:
                 for person in vc_data["queue"][2:]:
-                    output += f"{current_template['queue_symbol']} {fmt_name(person)}\n"
+                    output += f"{current_template['queue_symbol']} {fmt_name_plain(person)}\n"
             else:
                 output += "- None\n"
             output += "-# ------------------\n" + current_template['away_calypso'] + "\n"
             if vc_data["calypso"]:
                 for person in vc_data["calypso"]:
-                    output += f"{current_template['calypso_symbol']} {fmt_name(person)}\n"
+                    output += f"{current_template['calypso_symbol']} {fmt_name_plain(person)}\n"
             else:
                 output += "- None\n"
             output += "-# ------------------\nReact to join the legend:\n" + current_template['reactions'] + "\n"
@@ -489,7 +721,10 @@ def render_vc_content(vc_id):
         )
 
         def fmt_card_name(name):
-            return f"📣 {name}" if name in vc_data["pinged"] else name
+            ping = "📣 " if name in vc_data["pinged"] else ""
+            roles_for = person_to_roles.get(name, [])
+            role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
+            return f"{ping}{name}{role_tag}"
 
         now_name = fmt_card_name(vc_data["queue"][0]) if len(vc_data["queue"]) >= 1 else "-"
         next_name = fmt_card_name(vc_data["queue"][1]) if len(vc_data["queue"]) >= 2 else "-"
