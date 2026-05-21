@@ -712,8 +712,17 @@ def render_vc_content(vc_id):
 
             for role in roles:
                 current_assigned = assignments.get(role, [])
-                war_btn_key = f"{vc_id}_war_{role}_{active_song}"
                 
+                # SAFEGUARD FIX: Clean out anyone who left the queue/calypso voice pool
+                # This prevents Streamlit from raising a StreamlitAPIException due to unmatched default values
+                default_assigned = [person for person in current_assigned if person in all_people]
+                
+                # Sync back adjustments downstream if anyone was stripped/left
+                if len(default_assigned) != len(current_assigned):
+                    changed = True
+                    new_assignments[role] = default_assigned
+
+                war_btn_key = f"{vc_id}_war_{role}_{active_song}"
                 row_col1, row_col2, row_col3 = st.columns([2, 3, 1])
                 
                 with row_col1:
@@ -721,17 +730,16 @@ def render_vc_content(vc_id):
                     st.markdown(f"##### {role_icon(role)} {role}")
                 
                 with row_col2:
-                    # CRITICAL FIX: The multiselect key now incorporates st.session_state.rev
-                    # Changing st.session_state.rev completely destroys the widget cache memory, clearing out losers!
                     picked_list = st.multiselect(
                         f"Assign {role}",
                         options=all_people,
-                        default=current_assigned,
+                        default=default_assigned,
                         key=f"{vc_id}_role_multi_{role}_{active_song}_{st.session_state.rev}",
                         disabled=not is_manager,
                         label_visibility="collapsed"
                     )
-                    if not war_triggered and set(picked_list) != set(current_assigned):
+                    # Safely handle dropdown updates only if a backend War state is not settling
+                    if not war_triggered and set(picked_list) != set(default_assigned):
                         changed = True
                         new_assignments[role] = picked_list
 
@@ -759,7 +767,7 @@ def render_vc_content(vc_id):
                     battle_placeholder = st.empty()
                     chosen_anime = random.choice(anime_gifs)
                     
-                    # UPDATED FIX: Run the countdown loop for exactly 5 seconds
+                    # Run countdown loops for exactly 5 seconds
                     for timer in range(5, 0, -1):
                         battle_placeholder.markdown(
                             f"""
@@ -781,11 +789,11 @@ def render_vc_content(vc_id):
                         "role_assignments": dict(vc_data.get("role_assignments", {}))
                     })
                     
-                    # Update data payload
+                    # Update database with only the single winner kept inside the list assignment
                     new_assignments[role] = [winner]
                     vc_data["role_assignments"] = new_assignments
                     
-                    # CRITICAL FIX: Increment the state modifier key so front-end components discard the old user selections cache
+                    # Increment key revision to force multi-select UI widgets to dump their user-selection cache memory
                     st.session_state.rev += 1
                     
                     save_state(vc_id, vc_data)
