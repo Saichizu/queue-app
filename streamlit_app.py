@@ -613,7 +613,7 @@ def render_vc_content(vc_id):
             raw_assignments = vc_data.get("role_assignments", {})
             assignments = {}
             
-            # CRITICAL FORMAT SANITIZATION: Safely converts any old selectbox string data to proper list arrays
+            # CRITICAL FORMAT SANITIZATION: Converts old selectbox string records into proper list objects
             for k, v in raw_assignments.items():
                 if isinstance(v, list):
                     assignments[k] = v
@@ -644,7 +644,7 @@ def render_vc_content(vc_id):
             for role in roles:
                 current_assigned = assignments.get(role, [])
                 
-                # SAFEGUARD FIX: Strip away anyone who left the queue or calypso pools
+                # SAFEGUARD FIX: Instantly strip away anyone who disconnected or left the queue pool
                 default_assigned = [person for person in current_assigned if person in all_people]
                 
                 if len(default_assigned) != len(current_assigned):
@@ -678,9 +678,10 @@ def render_vc_content(vc_id):
                 if war_clicked:
                     war_triggered = True
                     import random
+                    
+                    # Hardcoded, explicit GIF list. (Use Tenor or direct media links for complete accuracy)
                     anime_gifs = [
-                        "https://tenor.com/bOIOd.gif",
-                        "https://tenor.com/bCn8l.gif"
+                        "https://media.giphy.com/media/iqkCNZIzSSXSM/giphy.gif"
                     ]
                     
                     battle_placeholder = st.empty()
