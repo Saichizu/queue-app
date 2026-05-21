@@ -567,11 +567,56 @@ def render_vc_content(vc_id):
 
         history_key = f"{vc_id}_role_history"
         is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
-
-        # 1. Gather and Filter Song Lists
         song_list = list(EPIC_SONGS.keys())
+
+        # --- STEP 1: Process Wheel Spin State Before Rendering Layout ---
+        spin_triggered = False
         
-        # Row 1: Search box and Spin button
+        if is_manager and st.session_state.get(f"{vc_id}_spin_btn"):
+            import random
+            spinner_placeholder = st.empty()
+            spin_durations = [0.05] * 10 + [0.1] * 5 + [0.2] * 3 + [0.4] * 1
+            
+            # Slot machine flash animation
+            for duration in spin_durations:
+                temp_song = random.choice(song_list)
+                spinner_placeholder.markdown(
+                    f"""
+                    <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px; margin-bottom: 10px;">
+                        <h3 style="color: #ffaa00; margin: 0;">🎰 Spinning... 🎰</h3>
+                        <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{temp_song}</b> ✨</p>
+                    </div>
+                    """, 
+                    unsafe_allow_html=True
+                )
+                time.sleep(duration)
+                
+            winning_song = random.choice(song_list)
+            spinner_placeholder.empty()
+            
+            st.session_state[history_key].append({
+                "selected_song": vc_data.get("selected_song", ""),
+                "role_assignments": dict(vc_data.get("role_assignments", {}))
+            })
+            
+            # Commit selection to database record
+            vc_data["selected_song"] = winning_song
+            vc_data["role_assignments"] = {} 
+            active_song = winning_song
+            save_state(vc_id, vc_data)
+            
+            if vc_id == "vc1":
+                st.session_state.vc1_data = vc_data
+            else:
+                st.session_state.vc2_data = vc_data
+                
+            # Force the dropdown selection widget state to match the winner
+            st.session_state[f"{vc_id}_song_select"] = winning_song
+            st.toast(f"🎯 Landed on: {winning_song}!")
+            spin_triggered = True
+
+        # --- STEP 2: Render Inputs and Controls Layout ---
+        # Search box and Spin button arranged side-by-side
         spin_cols = st.columns([3, 1])
         with spin_cols[0]:
             search_query = st.text_input(
@@ -581,78 +626,47 @@ def render_vc_content(vc_id):
                 disabled=not is_manager,
                 label_visibility="collapsed"
             )
-        
-        filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
-        filtered_songs_with_none = ["— Select a song —"] + filtered_songs
+            
+            filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
+            filtered_songs_with_none = ["— Select a song —"] + filtered_songs
+
+            current_song = vc_data.get("selected_song", "")
+            if not current_song or current_song not in filtered_songs_with_none:
+                default_idx = 0
+            else:
+                default_idx = filtered_songs_with_none.index(current_song)
+
+            chosen_song = st.selectbox(
+                "Song",
+                filtered_songs_with_none,
+                index=default_idx,
+                key=f"{vc_id}_song_select",
+                disabled=not is_manager,
+                label_visibility="collapsed"
+            )
 
         with spin_cols[1]:
             spin_disabled = not is_manager or len(filtered_songs) == 0
-            spin_clicked = st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
+            st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
 
-        # 2. Handle Spin Execution via State Bridge
-        spin_target_key = f"{vc_id}_spun_song_bridge"
-        if spin_clicked and is_manager:
-            import random
-            
-            spin_placeholder = st.empty()
-            # Slot machine flash animation
-            for speed in [0.05, 0.05, 0.1, 0.1, 0.2, 0.3]:
-                random_flash = random.choice(filtered_songs)
-                spin_placeholder.markdown(
-                    f"""
-                    <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px; margin-bottom: 10px;">
-                        <h3 style="color: #ffaa00; margin: 0;">🎰 Spinning... 🎰</h3>
-                        <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{random_flash}</b> ✨</p>
-                    </div>
-                    """, 
-                    unsafe_allow_html=True
-                )
-                time.sleep(speed)
-            
-            # Lock in winning selection and push to state bridge
-            winning_song = random.choice(filtered_songs)
-            spin_placeholder.empty()
-            st.session_state[spin_target_key] = winning_song
-            st.toast(f"🎯 Landed on: {winning_song}!")
-            
-            # FORCE RE-RUN HERE: Tells Streamlit to immediately rebuild the UI with the spun song
-            st.rerun()
-
-        # 3. Render Dropdown Menu (Synchronized perfectly with Spun state)
-        current_song = vc_data.get("selected_song", "")
-        
-        # Check if a spin bridge value exists, use it, then pop it cleanly
-        if spin_target_key in st.session_state:
-            target_song = st.session_state[spin_target_key]
-            del st.session_state[spin_target_key]
-        else:
-            target_song = current_song
-        
-        default_idx = (filtered_songs_with_none.index(target_song)
-                       if target_song in filtered_songs_with_none else 0)
-
-        chosen_song = st.selectbox(
-            "Song",
-            filtered_songs_with_none,
-            index=default_idx,
-            key=f"{vc_id}_song_select",
-            disabled=not is_manager,
-            label_visibility="collapsed"
-        )
-
-        # 4. Trigger State Updates and Cleanups on Song Change
-        if is_manager and chosen_song != "— Select a song —" and chosen_song != current_song:
+        # --- STEP 3: Handle Dropdown Selection Event Changes ---
+        if is_manager and not spin_triggered and chosen_song != "— Select a song —" and chosen_song != current_song:
             st.session_state[history_key].append({
                 "selected_song": vc_data.get("selected_song", ""),
                 "role_assignments": dict(vc_data.get("role_assignments", {}))
             })
             vc_data["selected_song"] = chosen_song
-            vc_data["role_assignments"] = {}  # Clear roles out for fresh select
+            vc_data["role_assignments"] = {}
+            active_song = chosen_song
             save_state(vc_id, vc_data)
             if vc_id == "vc1":
                 st.session_state.vc1_data = vc_data
             else:
                 st.session_state.vc2_data = vc_data
+            st.rerun()
+
+        if spin_triggered:
+            st.balloons()
             st.rerun()
 
         # --- STEP 5: Vertical Role Assignment Matrix with Multiselect & War ---
