@@ -679,15 +679,6 @@ def render_vc_content(vc_id):
                     war_triggered = True
                     import random
                     anime_gifs = [
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iqkCNZIzSSXSM/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6ULDGyRw0uhECEhAaQ/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/qLErpwsfLyY6RSTJlJ/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iRDkNp3c0FXem0lCCF/giphy.gif",
-                        "https://tenor.com/n37Q1sMavJa.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YTNlbjk5NnFrZzltNzNpcHBjazUwa3h4dHV4a2Z4NjZwdnI0bXltYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VDZDQWaCR2YhQ0qeUo/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azUyaTV4M3Q0bG9mdjN3bmxrd3hmeXRleGYzaHducmwxdDY3cXh0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QN7yjB1My4sNhzNTg4/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YXU0ZnR4dngxOWxxOWxhZDRmcHMyNGI3czM5ODV5eHNoMnV0MGpubyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mmp8mYjezjgfi1SXW9/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWp6ajJoc2MxNTAxdDc5aXcycXExenp3N3g3enVtOWljbmtpMjdlYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ecotXu1Vhklym7D8rG/giphy.gif",
                         "https://tenor.com/bOIOd.gif",
                         "https://tenor.com/bCn8l.gif"
                     ]
