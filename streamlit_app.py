@@ -278,13 +278,13 @@ is_manager_vc2 = st.session_state.current_user_vc2 == st.session_state.vc2_data[
 if not is_manager_vc1 and not is_manager_vc2:
     st_autorefresh(interval=3000)
 
-st.title("⚔️EPIC Singing VC Queue🎭")
+st.markdown("<h1 style='text-align: center; font-weight: 700; margin-bottom: 1rem;'>EPIC KARAOKE MANAGER</h1>", unsafe_allow_html=True)
 
 # ========== MAIN NAVIGATION ==========
 selected_tab = st.segmented_control(
-    "Select Section",
+    "Select Section - Must use the dark theme from the top right triple dot setting !, use F11 for fullscreen",
     ["🎵 VC 1", "🎵 VC 2", "✨ Customize"],
-    default=st.session_state.get("main_selected_tab", "🎵 VC 1"),
+    default=st.session_state.get("main_selected_tab"),
     key="main_selected_tab"
 )
 
@@ -461,68 +461,9 @@ def render_vc_content(vc_id):
             )
 
     with actions_col:
-        st.markdown("#### Main Actions")
-        if st.button("⏩ Advance", use_container_width=True, key=f"{vc_id}_advance"):
-            if st.session_state[current_user_key] == vc_data["current_manager"]:
-                if vc_data["queue"]:
-                    first = vc_data["queue"].pop(0)
-                    vc_data["queue"].append(first)
-                    vc_data["selected_song"] = ""
-                    vc_data["role_assignments"] = {}
-                    # Clear YouTube sync
-                    st.session_state[yt_url_key] = ""
-                    st.session_state[yt_title_key] = ""
-                    history_key_adv = f"{vc_id}_role_history"
-                    st.session_state[history_key_adv] = []
-                    save_state(vc_id, vc_data)
-                    if vc_id == "vc1":
-                        st.session_state.vc1_data = vc_data
-                    else:
-                        st.session_state.vc2_data = vc_data
-                    st.rerun()
-            else:
-                st.warning("Not managing.")
-        if st.button("🧹 Clear All", use_container_width=True, key=f"{vc_id}_clear"):
-            if st.session_state[current_user_key] == vc_data["current_manager"]:
-                vc_data["queue"].clear()
-                vc_data["calypso"].clear()
-                vc_data["pinged"].clear()
-                save_state(vc_id, vc_data)
-                if vc_id == "vc1":
-                    st.session_state.vc1_data = vc_data
-                else:
-                    st.session_state.vc2_data = vc_data
-                st.rerun()
-            else:
-                st.warning("Not managing.")
-        if st.button("🔄 Refresh", use_container_width=True, key=f"{vc_id}_refresh"):
-            st.rerun()
-
-        st.markdown("---")
-        # Add people inside actions column
-        st.markdown("**Add to Queue**")
-        def join_on_enter_side():
-            name = st.session_state.get(f"{vc_id}_name_input_side", "").strip()
-            if name and name not in vc_data["queue"] and name not in vc_data["calypso"]:
-                vc_data["queue"].append(name)
-                st.session_state[f"{vc_id}_name_input_side"] = ""
-                save_state(vc_id, vc_data)
-                if vc_id == "vc1":
-                    st.session_state.vc1_data = vc_data
-                else:
-                    st.session_state.vc2_data = vc_data
-                st.rerun()
-
-        st.text_input(
-            "",
-            key=f"{vc_id}_name_input_side",
-            on_change=join_on_enter_side,
-            label_visibility="collapsed",
-            placeholder="Add people (Enter)"
-        )
-        st.button("🎤 Join", on_click=join_on_enter_side, use_container_width=True, key=f"{vc_id}_join_btn_side")
-
+        
         # ----------- Visual Queue Display -----------
+        st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("---")
         st.markdown("**🎭 Up Next**")
 
@@ -538,22 +479,24 @@ def render_vc_content(vc_id):
                     person_to_roles_vq.setdefault(p_vq, []).append(role_vq)
 
         def _vq_pb(person):
-            return ' <span style="font-size:0.65rem;background:#ff4444;color:white;border-radius:4px;padding:1px 4px;">📣</span>' if person in pinged else ""
+            return ' <span style="font-size:0.65rem;background:#39ff14;color:white;border-radius:4px;padding:1px 4px;">📣</span>' if person in pinged else ""
 
         def _vq_rt(person):
             roles = person_to_roles_vq.get(person, [])
-            return f'<div style="font-size:0.6rem;color:#aaa;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{", ".join(roles)}</div>' if roles else ""
+            # Added line-height: 1.1 and forced margin: 0 to prevent role text from dropping down too far
+            return f'<div style="font-size:0.9rem;color:#00ff88;margin:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{", ".join(roles)}</div>' if roles else ""
 
         if queue:
             cards_html = '<div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">'
 
             # #1 SINGING NOW — full width, gold (CENTERED)
             p = queue[0]
+            # Added line-height: 1.1 to the inner text wrappers to compress them vertically
             cards_html += f'''
             <div style="background:linear-gradient(135deg,#2a1a00,#5c3a00);border:1.5px solid #ffaa00;border-radius:8px;padding:7px 9px;text-align:center;">
-              <div style="font-size:0.58rem;color:#ffaa00;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">👑 SINGING NOW</div>
-              <div style="font-size:0.88rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{p}{_vq_pb(p)}</div>
-              <div style="display:flex;justify-content:center;width:100%;">{_vq_rt(p)}</div>
+              <div style="font-size:1.58rem;color:#ffaa00;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1.1;">👑 SINGING NOW</div>
+              <div style="font-size:1.88rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;margin:2px 0;">{p}{_vq_pb(p)}</div>
+              <div style="display:flex;justify-content:center;width:100%;line-height:1.1;">{_vq_rt(p)}</div>
             </div>'''
 
             # #2 NEXT UP — full width, blue (CENTERED)
@@ -561,9 +504,9 @@ def render_vc_content(vc_id):
                 p = queue[1]
                 cards_html += f'''
                 <div style="background:linear-gradient(135deg,#0d1f2d,#1a3a50);border:1.5px solid #4fc3f7;border-radius:8px;padding:7px 9px;text-align:center;">
-                  <div style="font-size:0.58rem;color:#4fc3f7;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">🌟 NEXT UP</div>
-                  <div style="font-size:0.88rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{p}{_vq_pb(p)}</div>
-                  <div style="display:flex;justify-content:center;width:100%;">{_vq_rt(p)}</div>
+                  <div style="font-size:1.38rem;color:#4fc3f7;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1.1;">🌟 NEXT UP</div>
+                  <div style="font-size:1.68rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;margin:2px 0;">{p}{_vq_pb(p)}</div>
+                  <div style="display:flex;justify-content:center;width:100%;line-height:1.1;">{_vq_rt(p)}</div>
                 </div>'''
 
             # #3+ — 2-column grid, number inline with name, same font size, not bold
@@ -574,7 +517,7 @@ def render_vc_content(vc_id):
                     num = j + 3
                     cards_html += f'''
                     <div style="background:linear-gradient(135deg,#111118,#1a1a2e);border:1.5px solid #444466;border-radius:7px;padding:6px 8px;min-width:0;">
-                      <div style="font-size:0.85rem;font-weight:400;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:#888899;margin-right:4px;">#{num}</span>{p}{_vq_pb(p)}</div>
+                      <div style="font-size:0.85rem;font-weight:400;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;"><span style="color:#888899;margin-right:4px;">#{num}</span>{p}{_vq_pb(p)}</div>
                       {_vq_rt(p)}
                     </div>'''
                 cards_html += '</div>'
@@ -595,14 +538,90 @@ def render_vc_content(vc_id):
             st.html(cards_html)
         else:
             st.markdown('<div style="color:#666;font-size:0.85rem;text-align:center;padding:16px 0;">Queue is empty</div>', unsafe_allow_html=True)
+            
+        # Add people inside actions column
+        st.markdown("---")
+        st.markdown("**Add to Queue**")
+        def join_on_enter_side():
+            name = st.session_state.get(f"{vc_id}_name_input_side", "").strip()
+            if name and name not in vc_data["queue"] and name not in vc_data["calypso"]:
+                vc_data["queue"].append(name)
+                st.session_state[f"{vc_id}_name_input_side"] = ""
+                save_state(vc_id, vc_data)
+                if vc_id == "vc1":
+                    st.session_state.vc1_data = vc_data
+                else:
+                    st.session_state.vc2_data = vc_data
+                st.rerun()
 
-    st.markdown("---")
+        # Create 2 columns to put the input field and button side-by-side
+        input_col, button_col = st.columns([3, 1])
+
+        with input_col:
+            st.text_input(
+                "",
+                key=f"{vc_id}_name_input_side",
+                on_change=join_on_enter_side,
+                label_visibility="collapsed",
+                placeholder="Add people (Enter)"
+            )
+            
+        with button_col:
+            st.button("🎤 Join", on_click=join_on_enter_side, use_container_width=True, key=f"{vc_id}_join_btn_side")
+
+        # ----------- Main Actions Section -----------
+        # Pushes "Main Actions" title downwards away from the divider line
+        st.markdown("**Main Actions**", unsafe_allow_html=True)
+        
+        if st.button("⏩ Advance", use_container_width=True, key=f"{vc_id}_advance"):
+            if st.session_state[current_user_key] == vc_data["current_manager"]:
+                if vc_data["queue"]:
+                    first = vc_data["queue"].pop(0)
+                    vc_data["queue"].append(first)
+                    vc_data["selected_song"] = ""
+                    vc_data["role_assignments"] = {}
+                    # Clear YouTube sync
+                    st.session_state[yt_url_key] = ""
+                    st.session_state[yt_title_key] = ""
+                    history_key_adv = f"{vc_id}_role_history"
+                    st.session_state[history_key_adv] = []
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
+            else:
+                st.warning("Not managing.")
+                
+        if st.button("🧹 Clear All", use_container_width=True, key=f"{vc_id}_clear"):
+            if st.session_state[current_user_key] == vc_data["current_manager"]:
+                vc_data["queue"].clear()
+                vc_data["calypso"].clear()
+                vc_data["pinged"].clear()
+                save_state(vc_id, vc_data)
+                if vc_id == "vc1":
+                    st.session_state.vc1_data = vc_data
+                else:
+                    st.session_state.vc2_data = vc_data
+                st.rerun()
+            else:
+                st.warning("Not managing.")
+                
+        if st.button("🔄 Refresh", use_container_width=True, key=f"{vc_id}_refresh"):
+            st.rerun()
+
+        
+
+        
 
     # ----------- Quick Actions + Template -----------
     qa_header_cols = st.columns([3, 1])
     with qa_header_cols[0]:
+        st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("#### Quick Actions")
     with qa_header_cols[1]:
+        st.markdown("<br>Select Template", unsafe_allow_html=True)
         available_templates_qa = get_available_templates()
         selected_template_qa = st.selectbox(
             "Template",
@@ -706,345 +725,216 @@ def render_vc_content(vc_id):
     # ----------- Layout: Reorder + Output -----------
     if vc_data["queue"]:
 
-        # ========== QUEUE MANAGER ==========
-        st.markdown("---")
-        st.markdown("### Queue Manager")
-
-        # Build reverse map: person → list of roles assigned to them
-        role_assignments = vc_data.get("role_assignments", {})
-        person_to_roles = {}
-        for role, people in role_assignments.items():
-            # Support both array strings and old scalar backward compatibility strings
-            loop_pool = people if isinstance(people, list) else ([people] if people else [])
-            for person in loop_pool:
-                if person and person != "— Unassigned —":
-                    person_to_roles.setdefault(person, []).append(role)
-
-        def fmt_name(name):
-            """Format name with ping indicator and assigned roles."""
-            base = f"{name} 📣" if name in vc_data["pinged"] else name
-            roles_for = person_to_roles.get(name, [])
-            if roles_for:
-                base += " [" + ", ".join(roles_for) + "]"
-            return base
-
-        def fmt_name_plain(name):
-            """Format name for output text (no ping icon, just roles)."""
-            ping = " 📣" if name in vc_data["pinged"] else ""
-            roles_for = person_to_roles.get(name, [])
-            role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
-            return f"{name}{ping}{role_tag}"
-
-        # Reorder column shows names with their assigned roles inline
-        left, right = st.columns([1, 2])
-        with left:
-            st.markdown("#### 🔀 Reorder")
-            if st.session_state[current_user_key] == vc_data["current_manager"]:
-                display_items = [f"{p} 📣" if p in vc_data["pinged"] else p for p in vc_data["queue"]]
-
-                # Force sortable to refresh whenever queue length/content changes
-                sortable_key = f"sortable_{vc_id}_{len(vc_data['queue'])}_{hash(tuple(vc_data['queue']))}_{st.session_state.rev}"
-
-                reordered_display = sortables.sort_items(
-                    display_items,
-                    direction="vertical",
-                    key=sortable_key
-                )
-                display_to_name = {
-                    (f"{p} 📣" if p in vc_data["pinged"] else p): p for p in vc_data["queue"]
-                }
-                
-                reordered_names = [display_to_name.get(d, d) for d in reordered_display]
-                if reordered_names != vc_data["queue"]:
-                    vc_data["queue"] = reordered_names
-                    save_state(vc_id, vc_data)
-                    if vc_id == "vc1":
-                        st.session_state.vc1_data = vc_data
-                    else:
-                        st.session_state.vc2_data = vc_data
-                    st.rerun()
-            else:
-                st.info("🔹 Only the manager can reorder.")
-
-        with right:
-            current_template = load_template(vc_data["current_template"])
-
-            output = f"{current_template['title']}\n"
-            output += f"{current_template['url']}\n"
-            output += f"Template by: {vc_data['current_template']}\n"
-            output += f"Managed by: {vc_data['current_manager'] if vc_data['current_manager'] else '-'}\n"
-            if active_song:
-                output += f"🎵 {active_song}\n"
-            output += "-# ------------------\n"
-            output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name_plain(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
-            output += "-# ------------------\n"
-            output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name_plain(vc_data['queue'][1]) if len(vc_data['queue'])>=2 else '-'}\n"
-            output += "-# ------------------\n" + current_template['on_queue'] + "\n"
-            if len(vc_data["queue"]) > 2:
-                for person in vc_data["queue"][2:]:
-                    output += f"{current_template['queue_symbol']} {fmt_name_plain(person)}\n"
-            else:
-                output += "- None\n"
-            output += "-# ------------------\n" + current_template['away_calypso'] + "\n"
-            if vc_data["calypso"]:
-                for person in vc_data["calypso"]:
-                    output += f"{current_template['calypso_symbol']} {fmt_name_plain(person)}\n"
-            else:
-                output += "- None\n"
-            output += "-# ------------------\nReact to join the legend:\n" + current_template['reactions'] + "\n"
-            output += "-# ------------------\n"
-            output += f"{current_template['wheel_link']}\n"
-            st.code(output, language="text")
-
-        # ========== SONG & ROLE ASSIGNMENT ==========
-        st.markdown("---")
-        st.markdown("### 🎵 Song & Role Assignment")
-
-        history_key = f"{vc_id}_role_history"
-        is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
-        song_list = list(EPIC_SONGS.keys())
-
-        # --- STEP 1: Process Wheel Spin State Before Rendering Layout ---
-        spin_triggered = False
+        # WE SPLIT THE ENTIRE BOTTOM CONTAINER SIDE-BY-SIDE HERE
+        queue_panel_col, empty_spacer_col, roles_panel_col = st.columns([1.5, 1.0, 1.8], gap="xxsmall")
         
-        if is_manager and st.session_state.get(f"{vc_id}_spin_btn"):
-            import random
-            spinner_placeholder = st.empty()
-            spin_durations = [0.05] * 10 + [0.1] * 5 + [0.2] * 3 + [0.4] * 1
-            
-            # Slot machine flash animation
-            for duration in spin_durations:
-                temp_song = random.choice(song_list)
-                spinner_placeholder.markdown(
-                    f"""
-                    <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px; margin-bottom: 10px;">
-                        <h3 style="color: #ffaa00; margin: 0;">🎰 Spinning... 🎰</h3>
-                        <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{temp_song}</b> ✨</p>
-                    </div>
-                    """, 
-                    unsafe_allow_html=True
-                )
-                time.sleep(duration)
-                
-            winning_song = random.choice(song_list)
-            spinner_placeholder.empty()
-            
-            st.session_state[history_key].append({
-                "selected_song": vc_data.get("selected_song", ""),
-                "role_assignments": dict(vc_data.get("role_assignments", {}))
-            })
-            
-            # Commit selection to database record
-            vc_data["selected_song"] = winning_song
-            vc_data["role_assignments"] = {} 
-            active_song = winning_song
-            save_state(vc_id, vc_data)
-            
-            if vc_id == "vc1":
-                st.session_state.vc1_data = vc_data
-            else:
-                st.session_state.vc2_data = vc_data
-                
-            # Force the dropdown selection widget state to match the winner
-            st.session_state[f"{vc_id}_song_select"] = winning_song
-            # --- SYNC: update YouTube player to match spun song ---
-            yt_match = find_best_karaoke_match(winning_song)
-            if yt_match:
-                st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
-                st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
-            st.toast(f"🎯 Landed on: {winning_song}!")
-            spin_triggered = True
+        with empty_spacer_col:
+            st.markdown("---")
 
-        # --- STEP 2: Render Inputs and Controls Layout ---
-        # Search box and Spin button arranged side-by-side
-        spin_cols = st.columns([3, 1])
-        with spin_cols[0]:
-            search_query = st.text_input(
-                "🔍 Search song",
-                key=f"{vc_id}_song_search",
-                placeholder="Type to filter songs...",
-                disabled=not is_manager,
-                label_visibility="collapsed"
-            )
-            
-            filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
-            filtered_songs_with_none = ["— Select a song —"] + filtered_songs
+        # =========================================================
+        # 👈 LEFT MAIN COLUMN: QUEUE MANAGER
+        # =========================================================
+        with queue_panel_col:
+            st.markdown("---")
+            st.markdown("### Queue Manager")
 
-            current_song = vc_data.get("selected_song", "")
-            if not current_song or current_song not in filtered_songs_with_none:
-                default_idx = 0
-            else:
-                default_idx = filtered_songs_with_none.index(current_song)
+            # Build reverse map: person → list of roles assigned to them
+            role_assignments = vc_data.get("role_assignments", {})
+            person_to_roles = {}
+            for role, people in role_assignments.items():
+                # Support both array strings and old scalar backward compatibility strings
+                loop_pool = people if isinstance(people, list) else ([people] if people else [])
+                for person in loop_pool:
+                    if person and person != "— Unassigned —":
+                        person_to_roles.setdefault(person, []).append(role)
 
-            chosen_song = st.selectbox(
-                "Song",
-                filtered_songs_with_none,
-                index=default_idx,
-                key=f"{vc_id}_song_select",
-                disabled=not is_manager,
-                label_visibility="collapsed"
-            )
+            def fmt_name(name):
+                """Format name with ping indicator and assigned roles."""
+                base = f"{name} 📣" if name in vc_data["pinged"] else name
+                roles_for = person_to_roles.get(name, [])
+                if roles_for:
+                    base += " [" + ", ".join(roles_for) + "]"
+                return base
 
-        with spin_cols[1]:
-            spin_disabled = not is_manager or len(filtered_songs) == 0
-            st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
+            def fmt_name_plain(name):
+                """Format name for output text (no ping icon, just roles)."""
+                ping = " 📣" if name in vc_data["pinged"] else ""
+                roles_for = person_to_roles.get(name, [])
+                role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
+                return f"{name}{ping}{role_tag}"
 
-        # --- STEP 3: Handle Dropdown Selection Event Changes ---
-        if is_manager and not spin_triggered and chosen_song != "— Select a song —" and chosen_song != current_song:
-            st.session_state[history_key].append({
-                "selected_song": vc_data.get("selected_song", ""),
-                "role_assignments": dict(vc_data.get("role_assignments", {}))
-            })
-            vc_data["selected_song"] = chosen_song
-            vc_data["role_assignments"] = {}
-            active_song = chosen_song
-            # --- SYNC: update YouTube player ---
-            yt_match = find_best_karaoke_match(chosen_song)
-            if yt_match:
-                st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
-                st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
-            save_state(vc_id, vc_data)
-            if vc_id == "vc1":
-                st.session_state.vc1_data = vc_data
-            else:
-                st.session_state.vc2_data = vc_data
-            st.rerun()
+            # Reorder column shows names with their assigned roles inline
+            left, right = st.columns([1, 2])
+            with left:
+                st.markdown("#### 🔀 Reorder")
+                if st.session_state[current_user_key] == vc_data["current_manager"]:
+                    display_items = [f"{p} 📣" if p in vc_data["pinged"] else p for p in vc_data["queue"]]
 
-        if spin_triggered:
-            st.balloons()
-            st.rerun()
+                    # Force sortable to refresh whenever queue length/content changes
+                    sortable_key = f"sortable_{vc_id}_{len(vc_data['queue'])}_{hash(tuple(vc_data['queue']))}_{st.session_state.rev}"
 
-        # --- STEP 5: Vertical Role Assignment Matrix with Multiselect & War ---
-        if active_song and active_song in EPIC_SONGS:
-            roles = EPIC_SONGS[active_song]
-            
-            raw_assignments = vc_data.get("role_assignments", {})
-            assignments = {}
-            for k, v in raw_assignments.items():
-                if isinstance(v, list):
-                    assignments[k] = v
-                else:
-                    assignments[k] = [v] if v and v != "— Unassigned —" else []
-
-            all_people = vc_data["queue"]
-            st.markdown(f"**Assigning roles for:** *{active_song}*")
-
-            def role_icon(role):
-                r = role.lower()
-                if any(x in r for x in ["zeus", "poseidon", "athena", "hermes", "hera", "aphrodite", "ares", "apollo", "hephaestus"]):
-                    return "⚡"
-                if any(x in r for x in ["odysseus", "telemachus", "penelope", "antinous"]):
-                    return "⚔️"
-                if any(x in r for x in ["circe", "calypso", "siren", "scylla", "charybdis"]):
-                    return "🌊"
-                if any(x in r for x in ["crew", "ensemble", "suitors", "soldiers", "souls", "spirits"]):
-                    return "👥"
-                if any(x in r for x in ["polyphemus", "cyclops", "monster", "beast"]):
-                    return "👁️"
-                return "🎶"
-
-            changed = False
-            war_triggered = False
-            new_assignments = dict(assignments)
-
-            for role in roles:
-                current_assigned = assignments.get(role, [])
-                
-                # SAFEGUARD FIX: Instantly strip away anyone who disconnected or left the channel pool
-                default_assigned = [person for person in current_assigned if person in all_people]
-                
-                if len(default_assigned) != len(current_assigned):
-                    changed = True
-                    new_assignments[role] = default_assigned
-
-                war_btn_key = f"{vc_id}_war_{role}_{active_song}"
-                row_col1, row_col2, row_col3 = st.columns([2, 3, 1])
-                
-                with row_col1:
-                    st.write("") 
-                    st.markdown(f"##### {role_icon(role)} {role}")
-                
-                with row_col2:
-                    picked_list = st.multiselect(
-                        f"Assign {role}",
-                        options=all_people,
-                        default=default_assigned,
-                        key=f"{vc_id}_role_multi_{role}_{active_song}_{st.session_state.rev}",
-                        disabled=not is_manager,
-                        label_visibility="collapsed"
+                    reordered_display = sortables.sort_items(
+                        display_items,
+                        direction="vertical",
+                        key=sortable_key
                     )
-                    if not war_triggered and set(picked_list) != set(default_assigned):
-                        changed = True
-                        new_assignments[role] = picked_list
+                    display_to_name = {
+                        (f"{p} 📣" if p in vc_data["pinged"] else p): p for p in vc_data["queue"]
+                    }
+                    
+                    reordered_names = [display_to_name.get(d, d) for d in reordered_display]
+                    if reordered_names != vc_data["queue"]:
+                        vc_data["queue"] = reordered_names
+                        save_state(vc_id, vc_data)
+                        if vc_id == "vc1":
+                            st.session_state.vc1_data = vc_data
+                        else:
+                            st.session_state.vc2_data = vc_data
+                        st.rerun()
+                else:
+                    st.info("🔹 Only the manager can reorder.")
 
-                with row_col3:
-                    war_disabled = (len(picked_list) < 2 or not is_manager)
-                    war_clicked = st.button("💥 War!", key=war_btn_key, disabled=war_disabled, use_container_width=True)
+            with right:
+                current_template = load_template(vc_data["current_template"])
 
-                if war_clicked:
-                    war_triggered = True
-                    import random
-                    
-                    # YOUR FULL ORIGINAL ANIME GIF POOL RECONSTITUTED
-                    anime_gifs = [
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iqkCNZIzSSXSM/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6ULDGyRw0uhECEhAaQ/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/qLErpwsfLyY6RSTJlJ/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iRDkNp3c0FXem0lCCF/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnV0Y3QycHUwOHE3aHBydDBmZXNibDZramp2dTM3ZzVoMHJ4MGFtYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cLjmtVDE8RXOPnviKv/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YTNlbjk5NnFrZzltNzNpcHBjazUwa3h4dHV4a2Z4NjZwdnI0bXltYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VDZDQWaCR2YhQ0qeUo/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azUyaTV4M3Q0bG9mdjN3bmxrd3hmeXRleGYzaHducmwxdDY3cXh0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QN7yjB1My4sNhzNTg4/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YXU0ZnR4dngxOWxxOWxhZDRmcHMyNGI3czM5ODV5eHNoMnV0MGpubyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mmp8mYjezjgfi1SXW9/giphy.gif",
-                        "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWp6ajJoc2MxNTAxdDc5aXcycXExenp3N3g3enVtOWljbmtpMjdlYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ecotXu1Vhklym7D8rG/giphy.gif",
-                        "https://media1.tenor.com/m/oe62qCQfpS4AAAAd/tsue-to-tsurugi-no-wistoria-wistoria-wand-and-sword.gif",
-                        "https://media1.tenor.com/m/pTehBNi86LMAAAAC/my-hero-academia-boku-no-hero-academia.gif"
-                    ]
-                    
-                    battle_placeholder = st.empty()
-                    chosen_anime = random.choice(anime_gifs)
-                    
-                    # 5 Second Countdown
-                    for timer in range(5, 0, -1):
-                        battle_placeholder.markdown(
-                            f"""
-                            <div style="text-align: center; padding: 15px; background-color: #0c0c0c; border: 3px dashed #ff4b4b; border-radius: 12px; margin: 15px 0;">
-                                <h2 style="color: #ff4b4b; margin: 0; font-family: sans-serif; text-shadow: 0 0 10px #ff0000;">🔥 ROLE WAR FOR {role.upper()}! 🔥</h2>
-                                <p style="font-size: 1.4rem; font-weight: bold; color: white;">Clashing finishes in {timer}...</p>
-                                <img src="{chosen_anime}" style="width: 100%; max-width: 450px; border-radius: 8px; border: 2px solid #fff;"/>
-                            </div>
-                            """,
-                            unsafe_allow_html=True
-                        )
-                        time.sleep(1.0)
-                    
-                    winner = random.choice(picked_list)
-                    battle_placeholder.empty()
-                    
-                    st.session_state[history_key].append({
-                        "selected_song": active_song,
-                        "role_assignments": dict(vc_data.get("role_assignments", {}))
-                    })
-                    
-                    new_assignments[role] = [winner]
-                    vc_data["role_assignments"] = new_assignments
-                    st.session_state.rev += 1
-                    save_state(vc_id, vc_data)
-                    
-                    if vc_id == "vc1":
-                        st.session_state.vc1_data = vc_data
-                    else:
-                        st.session_state.vc2_data = vc_data
-                        
-                    st.toast(f"🏆 {winner} won the fight for {role}!")
-                    st.balloons()
-                    st.rerun()
+                output = f"{current_template['title']}\n"
+                output += f"{current_template['url']}\n"
+                output += f"Template by: {vc_data['current_template']}\n"
+                output += f"Managed by: {vc_data['current_manager'] if vc_data['current_manager'] else '-'}\n"
+                if active_song:
+                    output += f"🎵 {active_song}\n"
+                output += "-# ------------------\n"
+                output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name_plain(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
+                output += "-# ------------------\n"
+                output += f"{current_template['next_up']}\n{current_template['next_symbol']} {fmt_name_plain(vc_data['queue'][1]) if len(vc_data['queue'])>=2 else '-'}\n"
+                output += "-# ------------------\n" + current_template['on_queue'] + "\n"
+                if len(vc_data["queue"]) > 2:
+                    for person in vc_data["queue"][2:]:
+                        output += f"{current_template['queue_symbol']} {fmt_name_plain(person)}\n"
+                else:
+                    output += "- None\n"
+                output += "-# ------------------\n" + current_template['away_calypso'] + "\n"
+                if vc_data["calypso"]:
+                    for person in vc_data["calypso"]:
+                        output += f"{current_template['calypso_symbol']} {fmt_name_plain(person)}\n"
+                else:
+                    output += "- None\n"
+                output += "-# ------------------\nReact to join the legend:\n" + current_template['reactions'] + "\n"
+                output += "-# ------------------\n"
+                output += f"{current_template['wheel_link']}\n"
+                st.code(output, language="text")
 
-            if is_manager and changed and not war_triggered:
+
+        # =========================================================
+        # 👉 RIGHT MAIN COLUMN: SONG & ROLE ASSIGNMENT
+        # =========================================================
+        with roles_panel_col:
+            st.markdown("---")
+            st.markdown("### 🎵 Song & Role Assignment")
+
+            history_key = f"{vc_id}_role_history"
+            is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
+            song_list = list(EPIC_SONGS.keys())
+
+            # --- STEP 1: Process Wheel Spin State Before Rendering Layout ---
+            spin_triggered = False
+            
+            if is_manager and st.session_state.get(f"{vc_id}_spin_btn"):
+                import random
+                spinner_placeholder = st.empty()
+                spin_durations = [0.05] * 10 + [0.1] * 5 + [0.2] * 3 + [0.4] * 1
+                
+                # Slot machine flash animation
+                for duration in spin_durations:
+                    temp_song = random.choice(song_list)
+                    spinner_placeholder.markdown(
+                        f"""
+                        <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px; margin-bottom: 10px;">
+                            <h3 style="color: #ffaa00; margin: 0;">🎰 Spinning... 🎰</h3>
+                            <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{temp_song}</b> ✨</p>
+                        </div>
+                        """, 
+                        unsafe_allow_html=True
+                    )
+                    time.sleep(duration)
+                    
+                winning_song = random.choice(song_list)
+                spinner_placeholder.empty()
+                
                 st.session_state[history_key].append({
-                    "selected_song": active_song,
-                    "role_assignments": dict(assignments)
+                    "selected_song": vc_data.get("selected_song", ""),
+                    "role_assignments": dict(vc_data.get("role_assignments", {}))
                 })
-                vc_data["role_assignments"] = new_assignments
+                
+                # Commit selection to database record
+                vc_data["selected_song"] = winning_song
+                vc_data["role_assignments"] = {} 
+                active_song = winning_song
+                save_state(vc_id, vc_data)
+                
+                if vc_id == "vc1":
+                    st.session_state.vc1_data = vc_data
+                else:
+                    st.session_state.vc2_data = vc_data
+                    
+                # Force the dropdown selection widget state to match the winner
+                st.session_state[f"{vc_id}_song_select"] = winning_song
+                # --- SYNC: update YouTube player to match spun song ---
+                yt_match = find_best_karaoke_match(winning_song)
+                if yt_match:
+                    st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
+                    st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
+                st.toast(f"🎯 Landed on: {winning_song}!")
+                spin_triggered = True
+
+            # --- STEP 2: Render Inputs and Controls Layout ---
+            # Search box and Spin button arranged side-by-side
+            spin_cols = st.columns([3, 1])
+            with spin_cols[0]:
+                search_query = st.text_input(
+                    "🔍 Search song",
+                    key=f"{vc_id}_song_search",
+                    placeholder="Type to filter songs...",
+                    disabled=not is_manager,
+                    label_visibility="collapsed"
+                )
+                
+                filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
+                filtered_songs_with_none = ["— Select a song —"] + filtered_songs
+
+                current_song = vc_data.get("selected_song", "")
+                if not current_song or current_song not in filtered_songs_with_none:
+                    default_idx = 0
+                else:
+                    default_idx = filtered_songs_with_none.index(current_song)
+
+                chosen_song = st.selectbox(
+                    "Song",
+                    filtered_songs_with_none,
+                    index=default_idx,
+                    key=f"{vc_id}_song_select",
+                    disabled=not is_manager,
+                    label_visibility="collapsed"
+                )
+
+            with spin_cols[1]:
+                spin_disabled = not is_manager or len(filtered_songs) == 0
+                st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
+
+            # --- STEP 3: Handle Dropdown Selection Event Changes ---
+            if is_manager and not spin_triggered and chosen_song != "— Select a song —" and chosen_song != current_song:
+                st.session_state[history_key].append({
+                    "selected_song": vc_data.get("selected_song", ""),
+                    "role_assignments": dict(vc_data.get("role_assignments", {}))
+                })
+                vc_data["selected_song"] = chosen_song
+                vc_data["role_assignments"] = {}
+                active_song = chosen_song
+                # --- SYNC: update YouTube player ---
+                yt_match = find_best_karaoke_match(chosen_song)
+                if yt_match:
+                    st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
+                    st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
                 save_state(vc_id, vc_data)
                 if vc_id == "vc1":
                     st.session_state.vc1_data = vc_data
@@ -1052,32 +942,185 @@ def render_vc_content(vc_id):
                     st.session_state.vc2_data = vc_data
                 st.rerun()
 
-            # Undo + Clear buttons
-            if is_manager:
-                clear_col, _ = st.columns([1, 3])
-                with clear_col:
-                    if st.button("🗑️ Clear Roles", use_container_width=True, key=f"{vc_id}_role_clear"):
+            if spin_triggered:
+                st.balloons()
+                st.rerun()
+
+            # --- STEP 5: Vertical Role Assignment Matrix with Multiselect & War ---
+            if active_song and active_song in EPIC_SONGS:
+                roles = EPIC_SONGS[active_song]
+                
+                raw_assignments = vc_data.get("role_assignments", {})
+                assignments = {}
+                for k, v in raw_assignments.items():
+                    if isinstance(v, list):
+                        assignments[k] = v
+                    else:
+                        assignments[k] = [v] if v and v != "— Unassigned —" else []
+
+                all_people = vc_data["queue"]
+                st.markdown(f"**Assigning roles for:** *{active_song}*")
+
+                def role_icon(role):
+                    r = role.lower()
+                    if any(x in r for x in ["zeus", "poseidon", "athena", "hermes", "hera", "aphrodite", "ares", "apollo", "hephaestus"]):
+                        return "⚡"
+                    if any(x in r for x in ["odysseus", "telemachus", "penelope", "antinous"]):
+                        return "⚔️"
+                    if any(x in r for x in ["circe", "calypso", "siren", "scylla", "charybdis"]):
+                        return "🌊"
+                    if any(x in r for x in ["crew", "ensemble", "suitors", "soldiers", "souls", "spirits"]):
+                        return "👥"
+                    if any(x in r for x in ["polyphemus", "cyclops", "monster", "beast"]):
+                        return "👁️"
+                    return "🎶"
+
+                changed = False
+                war_triggered = False
+                new_assignments = dict(assignments)
+
+                for role in roles:
+                    current_assigned = assignments.get(role, [])
+                    
+                    # SAFEGUARD FIX: Instantly strip away anyone who disconnected or left the channel pool
+                    default_assigned = [person for person in current_assigned if person in all_people]
+                    
+                    if len(default_assigned) != len(current_assigned):
+                        changed = True
+                        new_assignments[role] = default_assigned
+
+                    war_btn_key = f"{vc_id}_war_{role}_{active_song}"
+                    row_col1, row_col2, row_col3 = st.columns([2, 3, 1])
+                    
+                    with row_col1:
+                        st.write("")
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        st.markdown(f"##### {role_icon(role)} {role}")
+                    
+                    with row_col2:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        picked_list = st.multiselect(
+                            f"Assign {role}",
+                            options=all_people,
+                            default=default_assigned,
+                            key=f"{vc_id}_role_multi_{role}_{active_song}_{st.session_state.rev}",
+                            disabled=not is_manager,
+                            label_visibility="collapsed"
+                        )
+                        if not war_triggered and set(picked_list) != set(default_assigned):
+                            changed = True
+                            new_assignments[role] = picked_list
+
+                    with row_col3:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        war_disabled = (len(picked_list) < 2 or not is_manager)
+                        war_clicked = st.button("💥 War!", key=war_btn_key, disabled=war_disabled, use_container_width=True)
+
+                    if war_clicked:
+                        war_triggered = True
+                        import random
+                        
+                        anime_gifs = [
+                            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iqkCNZIzSSXSM/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/6ULDGyRw0uhECEhAaQ/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/qLErpwsfLyY6RSTJlJ/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeWwwbm4weXVhbmJqaWxhYW9keGp3MWJ6MTduNDFueG91bDg3aXZtbyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iRDkNp3c0FXem0lCCF/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExMnV0Y3QycHUwOHE3aHBydDBmZXNibDZramp2dTM3ZzVoMHJ4MGFtYyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/cLjmtVDE8RXOPnviKv/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YTNlbjk5NnFrZzltNzNpcHBjazUwa3h4dHV4a2Z4NjZwdnI0bXltYiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/VDZDQWaCR2YhQ0qeUo/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3azUyaTV4M3Q0bG9mdjN3bmxrd3hmeXRleGYzaHducmwxdDY3cXh0MiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/QN7yjB1My4sNhzNTg4/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPWVjZjA1ZTQ3YXU0ZnR4dngxOWxxOWxhZDRmcHMyNGI3czM5ODV5eHNoMnV0MGpubyZlcD12MV9naWZzX3NlYXJjaCZjdD1n/mmp8mYjezjgfi1SXW9/giphy.gif",
+                            "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWp6ajJoc2MxNTAxdDc5aXcycXExenp3N3g3enVtOWljbmtpMjdlYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ecotXu1Vhklym7D8rG/giphy.gif",
+                            "https://media1.tenor.com/m/oe62qCQfpS4AAAAd/tsue-to-tsurugi-no-wistoria-wistoria-wand-and-sword.gif",
+                            "https://media1.tenor.com/m/pTehBNi86LMAAAAC/my-hero-academia-boku-no-hero-academia.gif"
+                        ]
+                        
+                        # --- UNIQUE SHUFFLE POOL LIFECYCLE ---
+                        # Initialize or refresh the tracking pool if it's empty
+                        if "gif_pool" not in st.session_state or not st.session_state.gif_pool:
+                            st.session_state.gif_pool = list(anime_gifs)
+                            random.shuffle(st.session_state.gif_pool)
+                        
+                        # Pop the next unique random GIF out of our state container pool
+                        chosen_anime = st.session_state.gif_pool.pop()
+                        
+                        battle_placeholder = st.empty()
+                        
+                        # 5 Second Countdown
+                        for timer in range(5, 0, -1):
+                            battle_placeholder.markdown(
+                                f"""
+                                <div style="text-align: center; padding: 8px; background-color: #0c0c0c; border: 2px dashed #ff4b4b; border-radius: 8px; margin: 5px 0;">
+                                    <h4 style="color: #ff4b4b; margin: 0; font-family: sans-serif; font-size: 1.1rem; text-shadow: 0 0 5px #ff0000;">🔥 ROLE WAR FOR {role.upper()}! 🔥</h4>
+                                    <p style="font-size: 0.95rem; font-weight: bold; color: white; margin: 4px 0;">Clashing finishes in {timer}...</p>
+                                    <img src="{chosen_anime}" style="width: 100%; max-width: 470px; border-radius: 6px; border: 1.5px solid #fff;"/>
+                                </div>
+                                """,
+                                unsafe_allow_html=True
+                            )
+                            time.sleep(1.0)
+                        
+                        winner = random.choice(picked_list)
+                        battle_placeholder.empty()
+                        
                         st.session_state[history_key].append({
                             "selected_song": active_song,
                             "role_assignments": dict(vc_data.get("role_assignments", {}))
                         })
                         
-                        vc_data["role_assignments"] = {}
+                        new_assignments[role] = [winner]
+                        vc_data["role_assignments"] = new_assignments
                         st.session_state.rev += 1
-                        
                         save_state(vc_id, vc_data)
+                        
                         if vc_id == "vc1":
                             st.session_state.vc1_data = vc_data
                         else:
                             st.session_state.vc2_data = vc_data
+                            
+                        st.toast(f"🏆 {winner} won the fight for {role}!")
+                        st.balloons()
                         st.rerun()
-        elif active_song:
-            st.info("Song not found in database.")
-        else:
-            if is_manager:
-                st.info("Search, select, or spin a song above to assign roles.")
+
+                if is_manager and changed and not war_triggered:
+                    st.session_state[history_key].append({
+                        "selected_song": active_song,
+                        "role_assignments": dict(assignments)
+                    })
+                    vc_data["role_assignments"] = new_assignments
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    st.rerun()
+
+                # Undo + Clear buttons
+                if is_manager:
+                    clear_col, _ = st.columns([1, 3])
+                    with clear_col:
+                        st.markdown("<br>", unsafe_allow_html=True)
+                        if st.button("🗑️ Clear Roles", use_container_width=True, key=f"{vc_id}_role_clear"):
+                            st.session_state[history_key].append({
+                                "selected_song": active_song,
+                                "role_assignments": dict(vc_data.get("role_assignments", {}))
+                            })
+                            
+                            vc_data["role_assignments"] = {}
+                            st.session_state.rev += 1
+                            
+                            save_state(vc_id, vc_data)
+                            if vc_id == "vc1":
+                                st.session_state.vc1_data = vc_data
+                            else:
+                                st.session_state.vc2_data = vc_data
+                            st.rerun()
+            elif active_song:
+                st.info("Song not found in database.")
             else:
-                st.info("The manager hasn't selected a song yet.")
+                if is_manager:
+                    st.info("Search, select, or spin a song above to assign roles.")
+                else:
+                    st.info("The manager hasn't selected a song yet.")
                 
 # Render selected section
 if selected_tab == "🎵 VC 1":
