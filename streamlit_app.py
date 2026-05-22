@@ -8,6 +8,17 @@ import requests
 import time
 import random
 
+# ==========================================================
+# 🖥️ DESKTOP FULL-WIDTH / WIDE LAYOUT CONFIGURATION
+# This MUST be the first Streamlit command called in the script!
+# ==========================================================
+st.set_page_config(
+    page_title="EPIC Singing VC Queue",
+    page_icon="⚔️",
+    layout="wide",  # Enables full horizontal screen utilization on desktop
+    initial_sidebar_state="collapsed"
+)
+
 # ========== EPIC THE MUSICAL SONG DATA ==========
 EPIC_SONGS = {
     "The Horse and the Infant": ["Odysseus", "Zeus", "Soldiers", "Infant Astyanax"],
@@ -51,6 +62,79 @@ EPIC_SONGS = {
     "I Can't Help but Wonder": ["Odysseus", "Telemachus"],
     "Would You Fall in Love with Me Again": ["Odysseus", "Penelope"],
 }
+
+KARAOKE_SONGS = [
+    {"title": "The Horse and the Infant", "url": "https://www.youtube.com/watch?v=YZfPD0btgzA"},
+    {"title": "Just a Man", "url": "https://www.youtube.com/watch?v=Y8dXa_OY7wU"},
+    {"title": "Full Speed Ahead", "url": "https://www.youtube.com/watch?v=5rqbG4uHbgs"},
+    {"title": "Open Arms", "url": "https://www.youtube.com/watch?v=McPwEM2E-kA"},
+    {"title": "Warrior of the Mind", "url": "https://www.youtube.com/watch?v=2SZQ-C2od5I"},
+    {"title": "Polyphemus", "url": "https://www.youtube.com/watch?v=V7J5leX5YSI"},
+    {"title": "Survive", "url": "https://www.youtube.com/watch?v=0AAAQEPpC48"},
+    {"title": "Remember Them", "url": "https://www.youtube.com/watch?v=m1cmIF-bOjE"},
+    {"title": "My Goodbye", "url": "https://www.youtube.com/watch?v=6TUtiuD2S6I"},
+    {"title": "Storm", "url": "https://www.youtube.com/watch?v=23sr9u6dWvc"},
+    {"title": "Luck Runs Out", "url": "https://www.youtube.com/watch?v=ot_ZjHetnu8"},
+    {"title": "Keep Your Friends Close", "url": "https://www.youtube.com/watch?v=uuLIWp5APb4"},
+    {"title": "Ruthlessness", "url": "https://www.youtube.com/watch?v=R3qVgou4A9M"},
+    {"title": "Puppeteer", "url": "https://www.youtube.com/watch?v=dOQdxdGRZts"},
+    {"title": "Wouldn't You Like", "url": "https://www.youtube.com/watch?v=bcQge1DrhJ0"},
+    {"title": "Done For", "url": "https://www.youtube.com/watch?v=YEnjUfILZks"},
+    {"title": "There Are Other Ways", "url": "https://www.youtube.com/watch?v=DXyU4lgOdNg"},
+    {"title": "The Underworld", "url": "https://www.youtube.com/watch?v=nPLCZTYa7X8"},
+    {"title": "No Longer You", "url": "https://www.youtube.com/watch?v=54ubVuVJD7Y"},
+    {"title": "Monster", "url": "https://www.youtube.com/watch?v=5xEbWoPh-aU"},
+    {"title": "Suffering", "url": "https://www.youtube.com/watch?v=HvnMShpTeYY"},
+    {"title": "Different Beast", "url": "https://www.youtube.com/watch?v=BnLkgJKEelI"},
+    {"title": "Scylla", "url": "https://www.youtube.com/watch?v=-ZaYvNJ_nvY"},
+    {"title": "Mutiny", "url": "https://www.youtube.com/watch?v=dFenHkaoyck"},
+    {"title": "Thunder Bringer", "url": "https://www.youtube.com/watch?v=1AytyN8tHXA"},
+    {"title": "Legendary", "url": "https://www.youtube.com/watch?v=fKFqyr5Z1GY"},
+    {"title": "Little Wolf", "url": "https://www.youtube.com/watch?v=St0T0D3ArvY"},
+    {"title": "We'll Be Fine", "url": "https://www.youtube.com/watch?v=ogBM4tCu7Lc"},
+    {"title": "Love in Paradise", "url": "https://www.youtube.com/watch?v=wzwdfdB7fI8"},
+    {"title": "God Games", "url": "https://www.youtube.com/watch?v=iYSgqR_STUE"},
+    {"title": "Not Sorry for Loving You", "url": "https://www.youtube.com/watch?v=GFo4rNvfEgE"},
+    {"title": "Dangerous", "url": "https://www.youtube.com/watch?v=5Vl-hHDu23M"},
+    {"title": "Charybdis", "url": "https://www.youtube.com/watch?v=bHM8pjotMWw"},
+    {"title": "Get in the Water", "url": "https://www.youtube.com/watch?v=0QkUmui4_Uw"},
+    {"title": "Six Hundred Strike", "url": "https://www.youtube.com/watch?v=5i2U38ISj1c"},
+    {"title": "The Challenge", "url": "https://www.youtube.com/watch?v=I-KlhO46puk"},
+    {"title": "Hold Them Down", "url": "https://www.youtube.com/watch?v=LOgbDbrv2Q4"},
+    {"title": "Odysseus", "url": "https://www.youtube.com/watch?v=S4C55xJmMDc"},
+    {"title": "I Can't Help but Wonder", "url": "https://www.youtube.com/watch?v=v6qVpnoyLuk"},
+    {"title": "Would You Fall in Love with Me Again", "url": "https://www.youtube.com/watch?v=GEyvmZqOv0g"},
+]
+
+def find_best_karaoke_match(query):
+    """Find best matching karaoke song using fuzzy token matching."""
+    if not query:
+        return None
+    query_lower = query.lower()
+    best_match = None
+    best_score = 0
+    for song in KARAOKE_SONGS:
+        title_lower = song["title"].lower()
+        # Exact contains match gets top priority
+        if query_lower in title_lower:
+            score = len(query_lower) / len(title_lower) * 100 + 50
+        else:
+            # Token overlap scoring
+            q_tokens = set(query_lower.split())
+            t_tokens = set(title_lower.split())
+            overlap = q_tokens & t_tokens
+            score = len(overlap) / max(len(q_tokens), 1) * 100
+        if score > best_score:
+            best_score = score
+            best_match = song
+    return best_match if best_score > 0 else None
+
+def get_youtube_embed_url(yt_url):
+    """Convert YouTube watch URL to embed URL."""
+    if "watch?v=" in yt_url:
+        vid_id = yt_url.split("watch?v=")[1].split("&")[0]
+        return f"https://www.youtube.com/embed/{vid_id}"
+    return yt_url
 
 SAVE_FILE = "queue.json"
 TEMPLATES_DIR = "templates"
@@ -298,20 +382,98 @@ def render_vc_content(vc_id):
                 st.session_state.show_manager_confirm = False
                 st.session_state.manager_candidate = ""
 
-    # ----------- Top button bar -----------
-    st.markdown("#### Main Actions")
-    cols = st.columns([1, 1, 1, 0.3, 1])
-    with cols[0]:
+    # ----------- YouTube Karaoke Player -----------
+    st.markdown("---")
+    
+    # Initialize YouTube session state for this VC
+    yt_search_key = f"{vc_id}_yt_search"
+    yt_url_key = f"{vc_id}_yt_current_url"
+    yt_title_key = f"{vc_id}_yt_current_title"
+    if yt_url_key not in st.session_state:
+        st.session_state[yt_url_key] = ""
+        st.session_state[yt_title_key] = ""
+
+    def set_yt_from_song_title(song_title):
+        """Sync the YouTube player to a given song title (exact EPIC_SONGS key)."""
+        match = find_best_karaoke_match(song_title)
+        if match:
+            st.session_state[yt_url_key] = get_youtube_embed_url(match["url"])
+            st.session_state[yt_title_key] = match["title"]
+
+    def handle_yt_search():
+        query = st.session_state.get(yt_search_key, "").strip()
+        if query:
+            match = find_best_karaoke_match(query)
+            if match:
+                st.session_state[yt_url_key] = get_youtube_embed_url(match["url"])
+                st.session_state[yt_title_key] = match["title"]
+                matched_title = match["title"]
+                if matched_title in EPIC_SONGS:
+                    vc_data["selected_song"] = matched_title
+                    vc_data["role_assignments"] = {}
+                    save_state(vc_id, vc_data)
+                    if vc_id == "vc1":
+                        st.session_state.vc1_data = vc_data
+                    else:
+                        st.session_state.vc2_data = vc_data
+                    # Sync the Song & Role Assignment dropdown
+                    st.session_state[f"{vc_id}_song_select"] = matched_title
+            else:
+                st.session_state[yt_title_key] = "No match found"
+            # Clear the search bar so spin/dropdown/war aren't blocked
+            st.session_state[yt_search_key] = ""
+
+    # If active_song is set and YouTube isn't showing it yet, sync YT to match
+    if active_song and st.session_state.get(yt_title_key) != active_song:
+        set_yt_from_song_title(active_song)
+
+    # Layout: YouTube player (left/center) + Main Actions (right)
+    yt_col, actions_col = st.columns([3, 1])
+
+    with yt_col:
+        # Search bar for YouTube
+        st.text_input(
+            "🎵 Search karaoke song (press Enter)",
+            key=yt_search_key,
+            on_change=handle_yt_search,
+            placeholder="e.g. Odysseus, Storm, Polyphemus...",
+            label_visibility="visible"
+        )
+
+        if st.session_state[yt_title_key]:
+            st.caption(f"🎤 Now playing: **{st.session_state[yt_title_key]}**")
+
+        if st.session_state[yt_url_key]:
+            st.components.v1.iframe(
+                st.session_state[yt_url_key],
+                height=823,
+                scrolling=False
+            )
+        else:
+            st.markdown(
+                """
+                <div style="height:823px; display:flex; align-items:center; justify-content:center;
+                     background:#0e0e16; border:2px dashed #444; border-radius:10px; color:#888; font-size:1.1rem;">
+                    🎬 Search a song above to load the karaoke video
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+    with actions_col:
+        st.markdown("#### Main Actions")
         if st.button("⏩ Advance", use_container_width=True, key=f"{vc_id}_advance"):
             if st.session_state[current_user_key] == vc_data["current_manager"]:
                 if vc_data["queue"]:
                     first = vc_data["queue"].pop(0)
                     vc_data["queue"].append(first)
-                    # Clear role assignments and song on advance
                     vc_data["selected_song"] = ""
                     vc_data["role_assignments"] = {}
-                    history_key = f"{vc_id}_role_history"
-                    st.session_state[history_key] = []
+                    # Clear YouTube sync
+                    st.session_state[yt_url_key] = ""
+                    st.session_state[yt_title_key] = ""
+                    history_key_adv = f"{vc_id}_role_history"
+                    st.session_state[history_key_adv] = []
                     save_state(vc_id, vc_data)
                     if vc_id == "vc1":
                         st.session_state.vc1_data = vc_data
@@ -319,8 +481,7 @@ def render_vc_content(vc_id):
                         st.session_state.vc2_data = vc_data
                     st.rerun()
             else:
-                st.warning("You are not managing the queue.")
-    with cols[1]:
+                st.warning("Not managing.")
         if st.button("🧹 Clear All", use_container_width=True, key=f"{vc_id}_clear"):
             if st.session_state[current_user_key] == vc_data["current_manager"]:
                 vc_data["queue"].clear()
@@ -333,57 +494,131 @@ def render_vc_content(vc_id):
                     st.session_state.vc2_data = vc_data
                 st.rerun()
             else:
-                st.warning("You are not managing the queue.")
-    with cols[2]:
+                st.warning("Not managing.")
         if st.button("🔄 Refresh", use_container_width=True, key=f"{vc_id}_refresh"):
             st.rerun()
 
-    # Template selector - after main actions
-    st.markdown("#### Select Template")
-    available_templates = get_available_templates()
-    selected_template = st.selectbox(
-        "Select Template",
-        available_templates,
-        index=available_templates.index(vc_data["current_template"]) if vc_data["current_template"] in available_templates else 0,
-        key=f"{vc_id}_template_select"
-    )
-    
-    if selected_template != vc_data["current_template"]:
-        vc_data["current_template"] = selected_template
-        save_state(vc_id, vc_data)
-        if vc_id == "vc1":
-            st.session_state.vc1_data = vc_data
-        else:
-            st.session_state.vc2_data = vc_data
-        st.rerun()
+        st.markdown("---")
+        # Add people inside actions column
+        st.markdown("**Add to Queue**")
+        def join_on_enter_side():
+            name = st.session_state.get(f"{vc_id}_name_input_side", "").strip()
+            if name and name not in vc_data["queue"] and name not in vc_data["calypso"]:
+                vc_data["queue"].append(name)
+                st.session_state[f"{vc_id}_name_input_side"] = ""
+                save_state(vc_id, vc_data)
+                if vc_id == "vc1":
+                    st.session_state.vc1_data = vc_data
+                else:
+                    st.session_state.vc2_data = vc_data
+                st.rerun()
 
-    # ----------- Input to join -----------
-    def join_on_enter():
-        name = st.session_state.get(f"{vc_id}_name_input", "").strip()
-        if name and name not in vc_data["queue"] and name not in vc_data["calypso"]:
-            vc_data["queue"].append(name)
-            st.session_state[f"{vc_id}_name_input"] = ""
+        st.text_input(
+            "",
+            key=f"{vc_id}_name_input_side",
+            on_change=join_on_enter_side,
+            label_visibility="collapsed",
+            placeholder="Add people (Enter)"
+        )
+        st.button("🎤 Join", on_click=join_on_enter_side, use_container_width=True, key=f"{vc_id}_join_btn_side")
+
+        # ----------- Visual Queue Display -----------
+        st.markdown("---")
+        st.markdown("**🎭 Up Next**")
+
+        queue = vc_data.get("queue", [])
+        calypso = vc_data.get("calypso", [])
+        pinged = vc_data.get("pinged", set())
+        role_assignments_vq = vc_data.get("role_assignments", {})
+        person_to_roles_vq = {}
+        for role_vq, people_vq in role_assignments_vq.items():
+            pool_vq = people_vq if isinstance(people_vq, list) else ([people_vq] if people_vq else [])
+            for p_vq in pool_vq:
+                if p_vq and p_vq != "— Unassigned —":
+                    person_to_roles_vq.setdefault(p_vq, []).append(role_vq)
+
+        def _vq_pb(person):
+            return ' <span style="font-size:0.65rem;background:#ff4444;color:white;border-radius:4px;padding:1px 4px;">📣</span>' if person in pinged else ""
+
+        def _vq_rt(person):
+            roles = person_to_roles_vq.get(person, [])
+            return f'<div style="font-size:0.6rem;color:#aaa;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{", ".join(roles)}</div>' if roles else ""
+
+        if queue:
+            cards_html = '<div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">'
+
+            # #1 SINGING NOW — full width, gold (CENTERED)
+            p = queue[0]
+            cards_html += f'''
+            <div style="background:linear-gradient(135deg,#2a1a00,#5c3a00);border:1.5px solid #ffaa00;border-radius:8px;padding:7px 9px;text-align:center;">
+              <div style="font-size:0.58rem;color:#ffaa00;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">👑 SINGING NOW</div>
+              <div style="font-size:0.88rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{p}{_vq_pb(p)}</div>
+              <div style="display:flex;justify-content:center;width:100%;">{_vq_rt(p)}</div>
+            </div>'''
+
+            # #2 NEXT UP — full width, blue (CENTERED)
+            if len(queue) >= 2:
+                p = queue[1]
+                cards_html += f'''
+                <div style="background:linear-gradient(135deg,#0d1f2d,#1a3a50);border:1.5px solid #4fc3f7;border-radius:8px;padding:7px 9px;text-align:center;">
+                  <div style="font-size:0.58rem;color:#4fc3f7;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;">🌟 NEXT UP</div>
+                  <div style="font-size:0.88rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{p}{_vq_pb(p)}</div>
+                  <div style="display:flex;justify-content:center;width:100%;">{_vq_rt(p)}</div>
+                </div>'''
+
+            # #3+ — 2-column grid, number inline with name, same font size, not bold
+            rest = queue[2:]
+            if rest:
+                cards_html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">'
+                for j, p in enumerate(rest):
+                    num = j + 3
+                    cards_html += f'''
+                    <div style="background:linear-gradient(135deg,#111118,#1a1a2e);border:1.5px solid #444466;border-radius:7px;padding:6px 8px;min-width:0;">
+                      <div style="font-size:0.85rem;font-weight:400;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"><span style="color:#888899;margin-right:4px;">#{num}</span>{p}{_vq_pb(p)}</div>
+                      {_vq_rt(p)}
+                    </div>'''
+                cards_html += '</div>'
+
+            cards_html += '</div>'
+
+            # Calypso — 2-column grid, inline name
+            if calypso:
+                cards_html += '<div style="margin-top:8px;font-size:0.6rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">🌴 Away with Calypso</div>'
+                cards_html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:3px;">'
+                for person in calypso:
+                    cards_html += f'''
+                    <div style="background:linear-gradient(135deg,#0d1a0d,#1a2d1a);border:1.5px solid #2d5a2d;border-radius:7px;padding:6px 8px;min-width:0;">
+                      <div style="font-size:0.85rem;font-weight:400;color:#aaffaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🌴 {person}{_vq_pb(person)}</div>
+                    </div>'''
+                cards_html += '</div>'
+
+            st.html(cards_html)
+        else:
+            st.markdown('<div style="color:#666;font-size:0.85rem;text-align:center;padding:16px 0;">Queue is empty</div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # ----------- Quick Actions + Template -----------
+    qa_header_cols = st.columns([3, 1])
+    with qa_header_cols[0]:
+        st.markdown("#### Quick Actions")
+    with qa_header_cols[1]:
+        available_templates_qa = get_available_templates()
+        selected_template_qa = st.selectbox(
+            "Template",
+            available_templates_qa,
+            index=available_templates_qa.index(vc_data["current_template"]) if vc_data["current_template"] in available_templates_qa else 0,
+            key=f"{vc_id}_template_select",
+            label_visibility="collapsed"
+        )
+        if selected_template_qa != vc_data["current_template"]:
+            vc_data["current_template"] = selected_template_qa
             save_state(vc_id, vc_data)
             if vc_id == "vc1":
                 st.session_state.vc1_data = vc_data
             else:
                 st.session_state.vc2_data = vc_data
             st.rerun()
-
-    join_cols = st.columns([4, 1])
-    with join_cols[0]:
-        st.text_input(
-            "",
-            key=f"{vc_id}_name_input",
-            on_change=join_on_enter,
-            label_visibility="collapsed",
-            placeholder="Add People"
-        )
-    with join_cols[1]:
-        st.button("🎤 Join", on_click=join_on_enter, use_container_width=True, key=f"{vc_id}_join_btn")
-
-    # ----------- Quick Actions -----------
-    st.markdown("#### Quick Actions")
     qa = st.columns(4)
 
     def render_names(names, action_key):
@@ -612,6 +847,11 @@ def render_vc_content(vc_id):
                 
             # Force the dropdown selection widget state to match the winner
             st.session_state[f"{vc_id}_song_select"] = winning_song
+            # --- SYNC: update YouTube player to match spun song ---
+            yt_match = find_best_karaoke_match(winning_song)
+            if yt_match:
+                st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
+                st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
             st.toast(f"🎯 Landed on: {winning_song}!")
             spin_triggered = True
 
@@ -658,6 +898,11 @@ def render_vc_content(vc_id):
             vc_data["selected_song"] = chosen_song
             vc_data["role_assignments"] = {}
             active_song = chosen_song
+            # --- SYNC: update YouTube player ---
+            yt_match = find_best_karaoke_match(chosen_song)
+            if yt_match:
+                st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
+                st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
             save_state(vc_id, vc_data)
             if vc_id == "vc1":
                 st.session_state.vc1_data = vc_data
@@ -681,7 +926,7 @@ def render_vc_content(vc_id):
                 else:
                     assignments[k] = [v] if v and v != "— Unassigned —" else []
 
-            all_people = vc_data["queue"] + vc_data["calypso"]
+            all_people = vc_data["queue"]
             st.markdown(f"**Assigning roles for:** *{active_song}*")
 
             def role_icon(role):
