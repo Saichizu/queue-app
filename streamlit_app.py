@@ -517,7 +517,7 @@ def render_vc_content(vc_id):
                     num = j + 3
                     cards_html += f'''
                     <div style="background:linear-gradient(135deg,#111118,#1a1a2e);border:1.5px solid #444466;border-radius:7px;padding:6px 8px;min-width:0;">
-                      <div style="font-size:0.85rem;font-weight:400;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;"><span style="color:#888899;margin-right:4px;">#{num}</span>{p}{_vq_pb(p)}</div>
+                      <div style="font-size:1.00rem;font-weight:400;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;"><span style="color:#888899;margin-right:4px;">#{num}</span>{p}{_vq_pb(p)}</div>
                       {_vq_rt(p)}
                     </div>'''
                 cards_html += '</div>'
@@ -526,12 +526,12 @@ def render_vc_content(vc_id):
 
             # Calypso — 2-column grid, inline name
             if calypso:
-                cards_html += '<div style="margin-top:8px;font-size:0.6rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">🌴 Away with Calypso</div>'
+                cards_html += '<div style="margin-top:8px;font-size:1.05rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">🌴 Away with Calypso</div>'
                 cards_html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:3px;">'
                 for person in calypso:
                     cards_html += f'''
                     <div style="background:linear-gradient(135deg,#0d1a0d,#1a2d1a);border:1.5px solid #2d5a2d;border-radius:7px;padding:6px 8px;min-width:0;">
-                      <div style="font-size:0.85rem;font-weight:400;color:#aaffaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🌴 {person}{_vq_pb(person)}</div>
+                      <div style="font-size:1.00rem;font-weight:400;color:#aaffaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🌴 {person}{_vq_pb(person)}</div>
                     </div>'''
                 cards_html += '</div>'
 
