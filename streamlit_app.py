@@ -428,7 +428,7 @@ def render_vc_content(vc_id):
         set_yt_from_song_title(active_song)
 
     # Layout: YouTube player (left/center) + Main Actions (right)
-    yt_col, actions_col = st.columns([3, 1])
+    yt_col, dummy_col, actions_col = st.columns([3, 0.1, 1])
 
     with yt_col:
         # Search bar for YouTube
@@ -446,13 +446,13 @@ def render_vc_content(vc_id):
         if st.session_state[yt_url_key]:
             st.components.v1.iframe(
                 st.session_state[yt_url_key],
-                height=823,
+                height=800,
                 scrolling=False
             )
         else:
             st.markdown(
                 """
-                <div style="height:823px; display:flex; align-items:center; justify-content:center;
+                <div style="height:800px; display:flex; align-items:center; justify-content:center;
                      background:#0e0e16; border:2px dashed #444; border-radius:10px; color:#888; font-size:1.1rem;">
                     🎬 Search a song above to load the karaoke video
                 </div>
