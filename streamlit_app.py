@@ -997,7 +997,8 @@ def render_vc_content(vc_id):
                             "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExOWp6ajJoc2MxNTAxdDc5aXcycXExenp3N3g3enVtOWljbmtpMjdlYSZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ecotXu1Vhklym7D8rG/giphy.gif",
                             "https://media1.tenor.com/m/oe62qCQfpS4AAAAd/tsue-to-tsurugi-no-wistoria-wistoria-wand-and-sword.gif",
                             "https://media1.tenor.com/m/pTehBNi86LMAAAAC/my-hero-academia-boku-no-hero-academia.gif",
-                            "https://media1.tenor.com/m/CEUEYMWI8eEAAAAC/%E5%8B%87%E8%80%85%E4%B9%8B%E6%B8%A3-scum-of-the-brave.gif"
+                            "https://media1.tenor.com/m/CEUEYMWI8eEAAAAC/%E5%8B%87%E8%80%85%E4%B9%8B%E6%B8%A3-scum-of-the-brave.gif",
+                            "https://media1.tenor.com/m/fdillqOJN1MAAAAC/%E5%8B%87%E8%80%85%E4%B9%8B%E6%B8%A3-scum-of-the-brave.gif"
                         ]
                         
                         if "gif_pool" not in st.session_state or not st.session_state.gif_pool:
