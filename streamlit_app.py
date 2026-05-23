@@ -7,6 +7,7 @@ from datetime import datetime
 import requests
 import time
 import random
+import html  # Added for HTML sanitization
 
 # ==========================================================
 # 🖥️ DESKTOP FULL-WIDTH / WIDE LAYOUT CONFIGURATION
@@ -115,11 +116,9 @@ def find_best_karaoke_match(query):
     best_score = 0
     for song in KARAOKE_SONGS:
         title_lower = song["title"].lower()
-        # Exact contains match gets top priority
         if query_lower in title_lower:
             score = len(query_lower) / len(title_lower) * 100 + 50
         else:
-            # Token overlap scoring
             q_tokens = set(query_lower.split())
             t_tokens = set(title_lower.split())
             overlap = q_tokens & t_tokens
@@ -141,11 +140,9 @@ TEMPLATES_DIR = "templates"
 ADMIN_PASSCODE = "531246"
 SYNC_CHECK_INTERVAL = 1  # Check for updates every 1 second
 
-# Ensure templates directory exists
 if not os.path.exists(TEMPLATES_DIR):
     os.makedirs(TEMPLATES_DIR)
 
-# Default template
 DEFAULT_TEMPLATE = {
     "name": "Default EPIC",
     "title": "🏛️ 𝑬𝑷𝑰𝑪 𝑺𝒐𝒏𝒈 𝑸𝒖𝒆𝒖𝒆 🎭",
@@ -291,7 +288,6 @@ selected_tab = st.segmented_control(
 def render_vc_content(vc_id):
     """Render queue content for a specific VC"""
     
-    # Load current VC data
     if vc_id == "vc1":
         vc_data = st.session_state.vc1_data
         current_user_key = "current_user_vc1"
@@ -299,7 +295,6 @@ def render_vc_content(vc_id):
         vc_data = st.session_state.vc2_data
         current_user_key = "current_user_vc2"
     
-    # Check for updates from other users
     if check_for_updates(vc_id, vc_data["last_modified"]):
         updated_data = load_state(vc_id)
         if vc_id == "vc1":
@@ -310,11 +305,10 @@ def render_vc_content(vc_id):
             vc_data = updated_data
         st.rerun()
     
-    # Define active_song early here so it can be safely used in the Output block below
     active_song = vc_data.get("selected_song", "")
     
     if vc_data["current_manager"]:
-        st.info(f"💡 Currently managing: **{vc_data['current_manager']}**")
+        st.info(f"💡 Currently managing: **{html.escape(vc_data['current_manager'])}**")
     else:
         st.info(f"💡 No one is managing {vc_id.upper()}. Press 'Manage Queue' to take control.")
 
@@ -323,12 +317,14 @@ def render_vc_content(vc_id):
     with claim_cols[0]:
         manager_name = st.text_input(
             "Type your name",
+            max_chars=20,  # Enforce 20 char limit on input level
             key=f"{vc_id}_manager_input",
             label_visibility="collapsed",
-            placeholder="Type your name"
-        )
+            placeholder="Type your name (Max 20 chars)"
+        ).strip()
 
     def really_claim_manager(name):
+        name = name[:20] # Safeguard truncation
         vc_data["current_manager"] = name
         save_state(vc_id, vc_data)
         st.session_state[current_user_key] = name
@@ -370,9 +366,8 @@ def render_vc_content(vc_id):
                 st.success("You have released manage rights.")
                 st.rerun()
 
-    # Prompt for manager replacement
     if st.session_state.show_manager_confirm:
-        st.warning(f"⚠️ You will REPLACE **{vc_data['current_manager']}** as manager. Are you sure?")
+        st.warning(f"⚠️ You will REPLACE **{html.escape(vc_data['current_manager'])}** as manager. Are you sure?")
         col_yes, col_no = st.columns(2)
         with col_yes:
             if st.button("Yes, replace", key=f"{vc_id}_manager_yes_btn"):
@@ -385,7 +380,6 @@ def render_vc_content(vc_id):
     # ----------- YouTube Karaoke Player -----------
     st.markdown("---")
     
-    # Initialize YouTube session state for this VC
     yt_search_key = f"{vc_id}_yt_search"
     yt_url_key = f"{vc_id}_yt_current_url"
     yt_title_key = f"{vc_id}_yt_current_title"
@@ -394,7 +388,6 @@ def render_vc_content(vc_id):
         st.session_state[yt_title_key] = ""
 
     def set_yt_from_song_title(song_title):
-        """Sync the YouTube player to a given song title (exact EPIC_SONGS key)."""
         match = find_best_karaoke_match(song_title)
         if match:
             st.session_state[yt_url_key] = get_youtube_embed_url(match["url"])
@@ -416,22 +409,17 @@ def render_vc_content(vc_id):
                         st.session_state.vc1_data = vc_data
                     else:
                         st.session_state.vc2_data = vc_data
-                    # Sync the Song & Role Assignment dropdown
                     st.session_state[f"{vc_id}_song_select"] = matched_title
             else:
                 st.session_state[yt_title_key] = "No match found"
-            # Clear the search bar so spin/dropdown/war aren't blocked
             st.session_state[yt_search_key] = ""
 
-    # If active_song is set and YouTube isn't showing it yet, sync YT to match
     if active_song and st.session_state.get(yt_title_key) != active_song:
         set_yt_from_song_title(active_song)
 
-    # Layout: YouTube player (left/center) + Main Actions (right)
     yt_col, dummy_col, actions_col = st.columns([3, 0.1, 1])
 
     with yt_col:
-        # Search bar for YouTube
         st.text_input(
             "🎵 Search karaoke song (press Enter)",
             key=yt_search_key,
@@ -441,7 +429,7 @@ def render_vc_content(vc_id):
         )
 
         if st.session_state[yt_title_key]:
-            st.caption(f"🎤 Now playing: **{st.session_state[yt_title_key]}**")
+            st.caption(f"🎤 Now playing: **{html.escape(st.session_state[yt_title_key])}**")
 
         if st.session_state[yt_url_key]:
             st.components.v1.iframe(
@@ -461,7 +449,6 @@ def render_vc_content(vc_id):
             )
 
     with actions_col:
-        
         # ----------- Visual Queue Display -----------
         st.markdown("<br><br>", unsafe_allow_html=True)
         st.markdown("---")
@@ -483,29 +470,31 @@ def render_vc_content(vc_id):
 
         def _vq_rt(person):
             roles = person_to_roles_vq.get(person, [])
-            # Added line-height: 1.1 and forced margin: 0 to prevent role text from dropping down too far
-            return f'<div style="font-size:0.9rem;color:#00ff88;margin:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{", ".join(roles)}</div>' if roles else ""
+            # Escape role strings to keep them secure
+            escaped_roles = [html.escape(r) for r in roles]
+            return f'<div style="font-size:0.9rem;color:#00ff88;margin:0;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{", ".join(escaped_roles)}</div>' if roles else ""
 
         if queue:
             cards_html = '<div style="display:flex;flex-direction:column;gap:5px;margin-top:4px;">'
 
             # #1 SINGING NOW — full width, gold (CENTERED)
             p = queue[0]
-            # Added line-height: 1.1 to the inner text wrappers to compress them vertically
+            escaped_p = html.escape(p)
             cards_html += f'''
             <div style="background:linear-gradient(135deg,#2a1a00,#5c3a00);border:1.5px solid #ffaa00;border-radius:8px;padding:7px 9px;text-align:center;">
               <div style="font-size:1.58rem;color:#ffaa00;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1.1;">👑 SINGING NOW</div>
-              <div style="font-size:1.88rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;margin:2px 0;">{p}{_vq_pb(p)}</div>
+              <div style="font-size:1.88rem;font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;margin:2px 0;">{escaped_p}{_vq_pb(p)}</div>
               <div style="display:flex;justify-content:center;width:100%;line-height:1.1;">{_vq_rt(p)}</div>
             </div>'''
 
             # #2 NEXT UP — full width, blue (CENTERED)
             if len(queue) >= 2:
                 p = queue[1]
+                escaped_p = html.escape(p)
                 cards_html += f'''
                 <div style="background:linear-gradient(135deg,#0d1f2d,#1a3a50);border:1.5px solid #4fc3f7;border-radius:8px;padding:7px 9px;text-align:center;">
                   <div style="font-size:1.38rem;color:#4fc3f7;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;line-height:1.1;">🌟 NEXT UP</div>
-                  <div style="font-size:1.68rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;margin:2px 0;">{p}{_vq_pb(p)}</div>
+                  <div style="font-size:1.68rem;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;margin:2px 0;">{escaped_p}{_vq_pb(p)}</div>
                   <div style="display:flex;justify-content:center;width:100%;line-height:1.1;">{_vq_rt(p)}</div>
                 </div>'''
 
@@ -515,9 +504,10 @@ def render_vc_content(vc_id):
                 cards_html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">'
                 for j, p in enumerate(rest):
                     num = j + 3
+                    escaped_p = html.escape(p)
                     cards_html += f'''
                     <div style="background:linear-gradient(135deg,#111118,#1a1a2e);border:1.5px solid #444466;border-radius:7px;padding:6px 8px;min-width:0;">
-                      <div style="font-size:1.00rem;font-weight:400;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;"><span style="color:#888899;margin-right:4px;">#{num}</span>{p}{_vq_pb(p)}</div>
+                      <div style="font-size:1.00rem;font-weight:400;color:#ddd;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.2;"><span style="color:#888899;margin-right:4px;">#{num}</span>{escaped_p}{_vq_pb(p)}</div>
                       {_vq_rt(p)}
                     </div>'''
                 cards_html += '</div>'
@@ -529,9 +519,10 @@ def render_vc_content(vc_id):
                 cards_html += '<div style="margin-top:8px;font-size:1.05rem;color:#888;text-transform:uppercase;letter-spacing:0.08em;">🌴 Away with Calypso</div>'
                 cards_html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:3px;">'
                 for person in calypso:
+                    escaped_person = html.escape(person)
                     cards_html += f'''
                     <div style="background:linear-gradient(135deg,#0d1a0d,#1a2d1a);border:1.5px solid #2d5a2d;border-radius:7px;padding:6px 8px;min-width:0;">
-                      <div style="font-size:1.00rem;font-weight:400;color:#aaffaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🌴 {person}{_vq_pb(person)}</div>
+                      <div style="font-size:1.00rem;font-weight:400;color:#aaffaa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">🌴 {escaped_person}{_vq_pb(person)}</div>
                     </div>'''
                 cards_html += '</div>'
 
@@ -544,6 +535,7 @@ def render_vc_content(vc_id):
         st.markdown("**Add to Queue**")
         def join_on_enter_side():
             name = st.session_state.get(f"{vc_id}_name_input_side", "").strip()
+            name = name[:20]  # Hard enforcement of 20 chars maximum
             if name and name not in vc_data["queue"] and name not in vc_data["calypso"]:
                 vc_data["queue"].append(name)
                 st.session_state[f"{vc_id}_name_input_side"] = ""
@@ -554,23 +546,22 @@ def render_vc_content(vc_id):
                     st.session_state.vc2_data = vc_data
                 st.rerun()
 
-        # Create 2 columns to put the input field and button side-by-side
         input_col, button_col = st.columns([3, 1])
 
         with input_col:
             st.text_input(
                 "",
+                max_chars=20,  # Enforce limit on browser side too
                 key=f"{vc_id}_name_input_side",
                 on_change=join_on_enter_side,
                 label_visibility="collapsed",
-                placeholder="Add people (Enter)"
+                placeholder="Add people (Max 20 chars)"
             )
             
         with button_col:
             st.button("🎤 Join", on_click=join_on_enter_side, use_container_width=True, key=f"{vc_id}_join_btn_side")
 
         # ----------- Main Actions Section -----------
-        # Pushes "Main Actions" title downwards away from the divider line
         st.markdown("**Main Actions**", unsafe_allow_html=True)
         
         if st.button("⏩ Advance", use_container_width=True, key=f"{vc_id}_advance"):
@@ -580,7 +571,6 @@ def render_vc_content(vc_id):
                     vc_data["queue"].append(first)
                     vc_data["selected_song"] = ""
                     vc_data["role_assignments"] = {}
-                    # Clear YouTube sync
                     st.session_state[yt_url_key] = ""
                     st.session_state[yt_title_key] = ""
                     history_key_adv = f"{vc_id}_role_history"
@@ -610,10 +600,6 @@ def render_vc_content(vc_id):
                 
         if st.button("🔄 Refresh", use_container_width=True, key=f"{vc_id}_refresh"):
             st.rerun()
-
-        
-
-        
 
     # ----------- Quick Actions + Template -----------
     qa_header_cols = st.columns([3, 1])
@@ -646,6 +632,7 @@ def render_vc_content(vc_id):
             col = cols[i % 2]
             with col:
                 st.markdown('<div class="name-btn">', unsafe_allow_html=True)
+                # Display escaped name on structural buttons safely
                 if st.button(person, key=f"{action_key}_{i}", use_container_width=True):
                     return person
                 st.markdown('</div>', unsafe_allow_html=True)
@@ -725,7 +712,6 @@ def render_vc_content(vc_id):
     # ----------- Layout: Reorder + Output -----------
     if vc_data["queue"]:
 
-        # WE SPLIT THE ENTIRE BOTTOM CONTAINER SIDE-BY-SIDE HERE
         queue_panel_col, empty_spacer_col, roles_panel_col = st.columns([1.5, 1.0, 1.8], gap="xxsmall")
         
         with empty_spacer_col:
@@ -738,39 +724,26 @@ def render_vc_content(vc_id):
             st.markdown("---")
             st.markdown("### Queue Manager")
 
-            # Build reverse map: person → list of roles assigned to them
             role_assignments = vc_data.get("role_assignments", {})
             person_to_roles = {}
             for role, people in role_assignments.items():
-                # Support both array strings and old scalar backward compatibility strings
                 loop_pool = people if isinstance(people, list) else ([people] if people else [])
                 for person in loop_pool:
                     if person and person != "— Unassigned —":
                         person_to_roles.setdefault(person, []).append(role)
 
-            def fmt_name(name):
-                """Format name with ping indicator and assigned roles."""
-                base = f"{name} 📣" if name in vc_data["pinged"] else name
-                roles_for = person_to_roles.get(name, [])
-                if roles_for:
-                    base += " [" + ", ".join(roles_for) + "]"
-                return base
-
             def fmt_name_plain(name):
-                """Format name for output text (no ping icon, just roles)."""
                 ping = " 📣" if name in vc_data["pinged"] else ""
                 roles_for = person_to_roles.get(name, [])
                 role_tag = " [" + ", ".join(roles_for) + "]" if roles_for else ""
                 return f"{name}{ping}{role_tag}"
 
-            # Reorder column shows names with their assigned roles inline
             left, right = st.columns([1, 2])
             with left:
                 st.markdown("#### 🔀 Reorder")
                 if st.session_state[current_user_key] == vc_data["current_manager"]:
                     display_items = [f"{p} 📣" if p in vc_data["pinged"] else p for p in vc_data["queue"]]
 
-                    # Force sortable to refresh whenever queue length/content changes
                     sortable_key = f"sortable_{vc_id}_{len(vc_data['queue'])}_{hash(tuple(vc_data['queue']))}_{st.session_state.rev}"
 
                     reordered_display = sortables.sort_items(
@@ -797,12 +770,19 @@ def render_vc_content(vc_id):
             with right:
                 current_template = load_template(vc_data["current_template"])
 
-                output = f"{current_template['title']}\n"
-                output += f"{current_template['url']}\n"
-                output += f"Template by: {vc_data['current_template']}\n"
-                output += f"Managed by: {vc_data['current_manager'] if vc_data['current_manager'] else '-'}\n"
+                # Sanitize template variables before formatting codeblock presentation block
+                t_title = html.escape(current_template.get('title', ''))
+                t_url = html.escape(current_template.get('url', ''))
+                t_tmpl = html.escape(vc_data['current_template'])
+                t_mngr = html.escape(vc_data['current_manager'] if vc_data['current_manager'] else '-')
+                t_song = html.escape(active_song)
+
+                output = f"{t_title}\n"
+                output += f"{t_url}\n"
+                output += f"Template by: {t_tmpl}\n"
+                output += f"Managed by: {t_mngr}\n"
                 if active_song:
-                    output += f"🎵 {active_song}\n"
+                    output += f"🎵 {t_song}\n"
                 output += "-# ------------------\n"
                 output += f"{current_template['currently_singing']}\n{current_template['current_symbol']} {fmt_name_plain(vc_data['queue'][0]) if len(vc_data['queue'])>=1 else '-'}\n"
                 output += "-# ------------------\n"
@@ -824,7 +804,6 @@ def render_vc_content(vc_id):
                 output += f"{current_template['wheel_link']}\n"
                 st.code(output, language="text")
 
-
         # =========================================================
         # 👉 RIGHT MAIN COLUMN: SONG & ROLE ASSIGNMENT
         # =========================================================
@@ -836,22 +815,19 @@ def render_vc_content(vc_id):
             is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
             song_list = list(EPIC_SONGS.keys())
 
-            # --- STEP 1: Process Wheel Spin State Before Rendering Layout ---
             spin_triggered = False
             
             if is_manager and st.session_state.get(f"{vc_id}_spin_btn"):
-                import random
                 spinner_placeholder = st.empty()
                 spin_durations = [0.05] * 10 + [0.1] * 5 + [0.2] * 3 + [0.4] * 1
                 
-                # Slot machine flash animation
                 for duration in spin_durations:
                     temp_song = random.choice(song_list)
                     spinner_placeholder.markdown(
                         f"""
                         <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px; margin-bottom: 10px;">
                             <h3 style="color: #ffaa00; margin: 0;">🎰 Spinning... 🎰</h3>
-                            <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{temp_song}</b> ✨</p>
+                            <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{html.escape(temp_song)}</b> ✨</p>
                         </div>
                         """, 
                         unsafe_allow_html=True
@@ -866,7 +842,6 @@ def render_vc_content(vc_id):
                     "role_assignments": dict(vc_data.get("role_assignments", {}))
                 })
                 
-                # Commit selection to database record
                 vc_data["selected_song"] = winning_song
                 vc_data["role_assignments"] = {} 
                 active_song = winning_song
@@ -877,9 +852,7 @@ def render_vc_content(vc_id):
                 else:
                     st.session_state.vc2_data = vc_data
                     
-                # Force the dropdown selection widget state to match the winner
                 st.session_state[f"{vc_id}_song_select"] = winning_song
-                # --- SYNC: update YouTube player to match spun song ---
                 yt_match = find_best_karaoke_match(winning_song)
                 if yt_match:
                     st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
@@ -887,8 +860,6 @@ def render_vc_content(vc_id):
                 st.toast(f"🎯 Landed on: {winning_song}!")
                 spin_triggered = True
 
-            # --- STEP 2: Render Inputs and Controls Layout ---
-            # Search box and Spin button arranged side-by-side
             spin_cols = st.columns([3, 1])
             with spin_cols[0]:
                 search_query = st.text_input(
@@ -921,7 +892,6 @@ def render_vc_content(vc_id):
                 spin_disabled = not is_manager or len(filtered_songs) == 0
                 st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
 
-            # --- STEP 3: Handle Dropdown Selection Event Changes ---
             if is_manager and not spin_triggered and chosen_song != "— Select a song —" and chosen_song != current_song:
                 st.session_state[history_key].append({
                     "selected_song": vc_data.get("selected_song", ""),
@@ -930,7 +900,6 @@ def render_vc_content(vc_id):
                 vc_data["selected_song"] = chosen_song
                 vc_data["role_assignments"] = {}
                 active_song = chosen_song
-                # --- SYNC: update YouTube player ---
                 yt_match = find_best_karaoke_match(chosen_song)
                 if yt_match:
                     st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
@@ -946,7 +915,6 @@ def render_vc_content(vc_id):
                 st.balloons()
                 st.rerun()
 
-            # --- STEP 5: Vertical Role Assignment Matrix with Multiselect & War ---
             if active_song and active_song in EPIC_SONGS:
                 roles = EPIC_SONGS[active_song]
                 
@@ -959,7 +927,7 @@ def render_vc_content(vc_id):
                         assignments[k] = [v] if v and v != "— Unassigned —" else []
 
                 all_people = vc_data["queue"]
-                st.markdown(f"**Assigning roles for:** *{active_song}*")
+                st.markdown(f"**Assigning roles for:** *{html.escape(active_song)}*")
 
                 def role_icon(role):
                     r = role.lower()
@@ -981,8 +949,6 @@ def render_vc_content(vc_id):
 
                 for role in roles:
                     current_assigned = assignments.get(role, [])
-                    
-                    # SAFEGUARD FIX: Instantly strip away anyone who disconnected or left the channel pool
                     default_assigned = [person for person in current_assigned if person in all_people]
                     
                     if len(default_assigned) != len(current_assigned):
@@ -995,7 +961,7 @@ def render_vc_content(vc_id):
                     with row_col1:
                         st.write("")
                         st.markdown("<br>", unsafe_allow_html=True)
-                        st.markdown(f"##### {role_icon(role)} {role}")
+                        st.markdown(f"##### {role_icon(role)} {html.escape(role)}")
                     
                     with row_col2:
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -1018,7 +984,6 @@ def render_vc_content(vc_id):
 
                     if war_clicked:
                         war_triggered = True
-                        import random
                         
                         anime_gifs = [
                             "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeXF0OTd1b2N2bTViZnJqbngwY3F5MmN0M3A1ZWx2czllM3ZzOGlraiZlcD12MV9naWZzX3NlYXJjaCZjdD1n/iqkCNZIzSSXSM/giphy.gif",
@@ -1034,23 +999,18 @@ def render_vc_content(vc_id):
                             "https://media1.tenor.com/m/pTehBNi86LMAAAAC/my-hero-academia-boku-no-hero-academia.gif"
                         ]
                         
-                        # --- UNIQUE SHUFFLE POOL LIFECYCLE ---
-                        # Initialize or refresh the tracking pool if it's empty
                         if "gif_pool" not in st.session_state or not st.session_state.gif_pool:
                             st.session_state.gif_pool = list(anime_gifs)
                             random.shuffle(st.session_state.gif_pool)
                         
-                        # Pop the next unique random GIF out of our state container pool
                         chosen_anime = st.session_state.gif_pool.pop()
-                        
                         battle_placeholder = st.empty()
                         
-                        # 5 Second Countdown
                         for timer in range(5, 0, -1):
                             battle_placeholder.markdown(
                                 f"""
                                 <div style="text-align: center; padding: 8px; background-color: #0c0c0c; border: 2px dashed #ff4b4b; border-radius: 8px; margin: 5px 0;">
-                                    <h4 style="color: #ff4b4b; margin: 0; font-family: sans-serif; font-size: 1.1rem; text-shadow: 0 0 5px #ff0000;">🔥 ROLE WAR FOR {role.upper()}! 🔥</h4>
+                                    <h4 style="color: #ff4b4b; margin: 0; font-family: sans-serif; font-size: 1.1rem; text-shadow: 0 0 5px #ff0000;">🔥 ROLE WAR FOR {html.escape(role.upper())}! 🔥</h4>
                                     <p style="font-size: 0.95rem; font-weight: bold; color: white; margin: 4px 0;">Clashing finishes in {timer}...</p>
                                     <img src="{chosen_anime}" style="width: 100%; max-width: 470px; border-radius: 6px; border: 1.5px solid #fff;"/>
                                 </div>
@@ -1077,7 +1037,7 @@ def render_vc_content(vc_id):
                         else:
                             st.session_state.vc2_data = vc_data
                             
-                        st.toast(f"🏆 {winner} won the fight for {role}!")
+                        st.toast(f"🏆 {html.escape(winner)} won the fight for {html.escape(role)}!")
                         st.balloons()
                         st.rerun()
 
@@ -1094,7 +1054,6 @@ def render_vc_content(vc_id):
                         st.session_state.vc2_data = vc_data
                     st.rerun()
 
-                # Undo + Clear buttons
                 if is_manager:
                     clear_col, _ = st.columns([1, 3])
                     with clear_col:
@@ -1135,7 +1094,6 @@ elif selected_tab == "✨ Customize":
     
     st.markdown("**Select or create a template to customize the queue appearance.**")
     
-    # Template selector
     available_templates = get_available_templates()
     selected_template = st.selectbox(
         "Select Template",
@@ -1143,7 +1101,6 @@ elif selected_tab == "✨ Customize":
         index=0
     )
     
-    # Load current template for editing
     template = load_template(selected_template)
     
     st.markdown("---")
@@ -1152,20 +1109,20 @@ elif selected_tab == "✨ Customize":
     col1, col2 = st.columns(2)
     
     with col1:
-        st.text_input("Title", value=template.get("title", ""), key="tmpl_title")
-        st.text_input("URL", value=template.get("url", ""), key="tmpl_url")
-        st.text_input("Currently Singing Text", value=template.get("currently_singing", ""), key="tmpl_currently_singing")
-        st.text_input("Currently Singing Symbol", value=template.get("current_symbol", ""), key="tmpl_current_symbol")
-        st.text_input("Next Up Text", value=template.get("next_up", ""), key="tmpl_next_up")
-        st.text_input("Next Up Symbol", value=template.get("next_symbol", ""), key="tmpl_next_symbol")
+        st.text_input("Title", value=template.get("title", ""), key="tmpl_title", max_chars=100)
+        st.text_input("URL", value=template.get("url", ""), key="tmpl_url", max_chars=100)
+        st.text_input("Currently Singing Text", value=template.get("currently_singing", ""), key="tmpl_currently_singing", max_chars=100)
+        st.text_input("Currently Singing Symbol", value=template.get("current_symbol", ""), key="tmpl_current_symbol", max_chars=50)
+        st.text_input("Next Up Text", value=template.get("next_up", ""), key="tmpl_next_up", max_chars=100)
+        st.text_input("Next Up Symbol", value=template.get("next_symbol", ""), key="tmpl_next_symbol", max_chars=50)
     
     with col2:
-        st.text_input("On Queue Text", value=template.get("on_queue", ""), key="tmpl_on_queue")
-        st.text_input("Queue Symbol", value=template.get("queue_symbol", ""), key="tmpl_queue_symbol")
-        st.text_input("Away with Calypso Text", value=template.get("away_calypso", ""), key="tmpl_away_calypso")
-        st.text_input("Calypso Symbol", value=template.get("calypso_symbol", ""), key="tmpl_calypso_symbol")
-        st.text_area("Reactions Info", value=template.get("reactions", ""), key="tmpl_reactions", height=80)
-        st.text_input("Wheel Link", value=template.get("wheel_link", ""), key="tmpl_wheel_link")
+        st.text_input("On Queue Text", value=template.get("on_queue", ""), key="tmpl_on_queue", max_chars=100)
+        st.text_input("Queue Symbol", value=template.get("queue_symbol", ""), key="tmpl_queue_symbol", max_chars=50)
+        st.text_input("Away with Calypso Text", value=template.get("away_calypso", ""), key="tmpl_away_calypso", max_chars=100)
+        st.text_input("Calypso Symbol", value=template.get("calypso_symbol", ""), key="tmpl_calypso_symbol", max_chars=50)
+        st.text_area("Reactions Info", value=template.get("reactions", ""), key="tmpl_reactions", height=80, max_chars=500)
+        st.text_input("Wheel Link", value=template.get("wheel_link", ""), key="tmpl_wheel_link", max_chars=100)
     
     st.markdown("---")
     
@@ -1186,21 +1143,35 @@ elif selected_tab == "✨ Customize":
         "wheel_link": st.session_state.tmpl_wheel_link
     }
     
-    preview_output = f"{preview_template['title']}\n"
-    preview_output += f"{preview_template['url']}\n"
-    preview_output += f"Template by: {selected_template}\n"
+    # Escape fields explicitly so they render harmlessly in the preview text area
+    p_title = html.escape(preview_template['title'])
+    p_url = html.escape(preview_template['url'])
+    p_curr_sing = html.escape(preview_template['currently_singing'])
+    p_curr_sym = html.escape(preview_template['current_symbol'])
+    p_next_up = html.escape(preview_template['next_up'])
+    p_next_sym = html.escape(preview_template['next_symbol'])
+    p_on_q = html.escape(preview_template['on_queue'])
+    p_q_sym = html.escape(preview_template['queue_symbol'])
+    p_away = html.escape(preview_template['away_calypso'])
+    p_cal_sym = html.escape(preview_template['calypso_symbol'])
+    p_react = html.escape(preview_template['reactions'])
+    p_wheel = html.escape(preview_template['wheel_link'])
+
+    preview_output = f"{p_title}\n"
+    preview_output += f"{p_url}\n"
+    preview_output += f"Template by: {html.escape(selected_template)}\n"
     preview_output += "Managed by: [Manager Name]\n"
     preview_output += "-# ------------------\n"
-    preview_output += f"{preview_template['currently_singing']}\n{preview_template['current_symbol']} [Person 1]\n"
+    preview_output += f"{p_curr_sing}\n{p_curr_sym} [Person 1]\n"
     preview_output += "-# ------------------\n"
-    preview_output += f"{preview_template['next_up']}\n{preview_template['next_symbol']} [Person 2]\n"
-    preview_output += "-# ------------------\n" + preview_template['on_queue'] + "\n"
-    preview_output += f"{preview_template['queue_symbol']} [Person 3]\n"
-    preview_output += "-# ------------------\n" + preview_template['away_calypso'] + "\n"
-    preview_output += f"{preview_template['calypso_symbol']} [Person 4]\n"
-    preview_output += "-# ------------------\nReact to join the legend:\n" + preview_template['reactions'] + "\n"
+    preview_output += f"{p_next_up}\n{p_next_sym} [Person 2]\n"
+    preview_output += "-# ------------------\n" + p_on_q + "\n"
+    preview_output += f"{p_q_sym} [Person 3]\n"
+    preview_output += "-# ------------------\n" + p_away + "\n"
+    preview_output += f"{p_cal_sym} [Person 4]\n"
+    preview_output += "-# ------------------\nReact to join the legend:\n" + p_react + "\n"
     preview_output += "-# ------------------\n"
-    preview_output += f"{preview_template['wheel_link']}\n"
+    preview_output += f"{p_wheel}\n"
     
     st.code(preview_output, language="text")
     
@@ -1212,9 +1183,10 @@ elif selected_tab == "✨ Customize":
     with save_col1:
         new_template_name = st.text_input(
             "Template Name (must be unique)",
-            placeholder="e.g., My Custom Queue",
+            max_chars=20,  # Limits custom template filenames to 20 chars
+            placeholder="e.g., My Custom Queue (Max 20 chars)",
             key="new_template_name"
-        )
+        ).strip()
     
     with save_col2:
         if st.button("💾 Save Template", use_container_width=True):
@@ -1222,8 +1194,8 @@ elif selected_tab == "✨ Customize":
                 if new_template_name == "Default EPIC":
                     st.error("Cannot overwrite the Default EPIC template.")
                 else:
-                    save_template(new_template_name, preview_template)
-                    st.success(f"✅ Template '{new_template_name}' saved successfully!")
+                    save_template(new_template_name[:20], preview_template)
+                    st.success(f"✅ Template '{html.escape(new_template_name[:20])}' saved successfully!")
                     st.rerun()
             else:
                 st.error("Please enter a template name.")
@@ -1234,7 +1206,7 @@ elif selected_tab == "✨ Customize":
     cols = st.columns(min(len(available_templates), 3))
     for idx, tmpl_name in enumerate(available_templates):
         with cols[idx % 3]:
-            st.button(f"📌 {tmpl_name}", use_container_width=True, key=f"load_tmpl_{tmpl_name}", disabled=True)
+            st.button(f"📌 {html.escape(tmpl_name)}", use_container_width=True, key=f"load_tmpl_{tmpl_name}", disabled=True)
     
     st.markdown("---")
     st.subheader("🗑️ Delete Templates")
@@ -1275,10 +1247,10 @@ elif selected_tab == "✨ Customize":
             with delete_btn_col1:
                 if st.button("🗑️ Delete Selected Template", use_container_width=True, key="delete_tmpl_btn"):
                     if delete_template(template_to_delete):
-                        st.success(f"✅ Template '{template_to_delete}' has been deleted!")
+                        st.success(f"✅ Template '{html.escape(template_to_delete)}' has been deleted!")
                         st.rerun()
                     else:
-                        st.error(f"Could not delete template '{template_to_delete}'")
+                        st.error(f"Could not delete template '{html.escape(template_to_delete)}'")
         else:
             st.info("ℹ️ No custom templates to delete. Only the Default EPIC template exists.")
     elif passcode_input and not st.session_state.admin_authenticated:
