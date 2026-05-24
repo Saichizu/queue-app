@@ -1195,24 +1195,20 @@ elif selected_tab == "✨ Customize":
     
     st.markdown("---")
     st.subheader("💾 Save Template")
+        
+    # Where you accept the new template name input
+    new_template_name = st.text_input("Template Name")
     
-    save_col1, save_col2 = st.columns([3, 1])
-    
-    with save_col1:
-        # Where you accept the new template name input
-        new_template_name = st.text_input("Template Name")
-    
-    with save_col2:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        if st.button("💾 Save Template"):
-            # Security & Path Sanitation check
-            if ".." in new_template_name or "/" in new_template_name or "\\" in new_template_name:
-                st.error("❌ Invalid template name. Do not use slashes or dots.")
-            elif not new_template_name.strip():
-                st.error("❌ Template name cannot be empty.")
-            else:
-                # Proceed with saving your template normally
-                save_template(new_template_name.strip(), current_config)
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    if st.button("💾 Save Template"):
+        # Security & Path Sanitation check
+        if ".." in new_template_name or "/" in new_template_name or "\\" in new_template_name:
+            st.error("❌ Invalid template name. Do not use slashes or dots.")
+        elif not new_template_name.strip():
+            st.error("❌ Template name cannot be empty.")
+        else:
+            # Proceed with saving your template normally
+            save_template(new_template_name.strip(), current_config)
     
     st.markdown("---")
     st.subheader("📚 Available Templates")
