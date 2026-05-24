@@ -1199,17 +1199,10 @@ elif selected_tab == "✨ Customize":
     save_col1, save_col2 = st.columns([3, 1])
     
     with save_col1:
-        new_template_name = st.text_input(
-            "Template Name (must be unique)",
-            max_chars=20,  # Limits custom template filenames to 20 chars
-            placeholder="e.g., My Custom Queue (Max 20 chars)",
-            key="new_template_name"
-        ).strip()
-    
-    with save_col2:
         # Where you accept the new template name input
         new_template_name = st.text_input("Template Name")
-        
+    
+    with save_col2:             
         if st.button("💾 Save Template"):
             # Security & Path Sanitation check
             if ".." in new_template_name or "/" in new_template_name or "\\" in new_template_name:
