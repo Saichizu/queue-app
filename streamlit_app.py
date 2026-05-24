@@ -244,12 +244,17 @@ def delete_template(template_name):
     return False
 
 def get_available_templates():
-    """Get list of available templates"""
+    """Get list of available templates without duplicates"""
     templates = ["Default EPIC"]
+    seen = {"Default EPIC"} # Track what we've already added
+    
     if os.path.exists(TEMPLATES_DIR):
         for file in os.listdir(TEMPLATES_DIR):
             if file.endswith(".json"):
-                templates.append(file.replace(".json", ""))
+                name = file.replace(".json", "")
+                if name not in seen:
+                    templates.append(name)
+                    seen.add(name)
     return templates
 
 # Initialize session state
