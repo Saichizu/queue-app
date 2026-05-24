@@ -1281,12 +1281,3 @@ st.markdown("""
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
     </style>
 """, unsafe_allow_html=True)
-
-# TEMPORARY CLEANUP BUTTON (Remove after using)
-if st.sidebar.button("⚠️ Force Delete Corrupted Template"):
-    corrupted_path = os.path.join("templates", "..\queue_vc1.json")
-    if os.path.exists(corrupted_path):
-        os.remove(corrupted_path)
-        st.sidebar.success("Successfully forced deletion!")
-    else:
-        st.sidebar.error("Could not find file via direct path.")
