@@ -233,15 +233,26 @@ def save_template(template_name, template_data):
         json.dump(template_data, f, indent=2)
 
 def delete_template(template_name):
-    """Delete template file"""
-    if template_name == "Default EPIC":
-        return False
+    # Strip out any directory traversal attempts like ../ or ..\
+    clean_name = os.path.basename(template_name)
     
-    template_file = os.path.join(TEMPLATES_DIR, f"{template_name}.json")
-    if os.path.exists(template_file):
-        os.remove(template_file)
-        return True
-    return False
+    # Alternatively, ensure it only points to a literal filename
+    file_path = os.path.join(TEMPLATES_DIR, f"{clean_name}.json")
+    
+    try:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            return True
+        else:
+            # If it still fails, check if the file literal name on disk is exactly the broken string
+            fallback_path = os.path.join(TEMPLATES_DIR, f"{template_name}.json")
+            if os.path.exists(fallback_path):
+                os.remove(fallback_path)
+                return True
+            return False
+    except Exception as e:
+        st.error(f"Error removing file: {e}")
+        return False
 
 def get_available_templates():
     """Get list of available templates without duplicates"""
@@ -1196,16 +1207,18 @@ elif selected_tab == "✨ Customize":
         ).strip()
     
     with save_col2:
-        if st.button("💾 Save Template", use_container_width=True):
-            if new_template_name:
-                if new_template_name == "Default EPIC":
-                    st.error("Cannot overwrite the Default EPIC template.")
-                else:
-                    save_template(new_template_name[:20], preview_template)
-                    st.success(f"✅ Template '{html.escape(new_template_name[:20])}' saved successfully!")
-                    st.rerun()
+        # Where you accept the new template name input
+        new_template_name = st.text_input("Template Name")
+        
+        if st.button("💾 Save Template"):
+            # Security & Path Sanitation check
+            if ".." in new_template_name or "/" in new_template_name or "\\" in new_template_name:
+                st.error("❌ Invalid template name. Do not use slashes or dots.")
+            elif not new_template_name.strip():
+                st.error("❌ Template name cannot be empty.")
             else:
-                st.error("Please enter a template name.")
+                # Proceed with saving your template normally
+                save_template(new_template_name.strip(), current_config)
     
     st.markdown("---")
     st.subheader("📚 Available Templates")
