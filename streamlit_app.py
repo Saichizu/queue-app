@@ -1203,7 +1203,7 @@ elif selected_tab == "✨ Customize":
         new_template_name = st.text_input("Template Name")
     
     with save_col2:
-        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
         if st.button("💾 Save Template"):
             # Security & Path Sanitation check
             if ".." in new_template_name or "/" in new_template_name or "\\" in new_template_name:
