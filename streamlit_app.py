@@ -533,7 +533,7 @@ def render_vc_content(vc_id):
             ("✨", "AMAZING",   ["#00FFFF","#00BFFF","#1E90FF","#87CEFA","#AADDFF"]),
             ("👑", "ICONIC",    ["#DA70D6","#FF69B4","#BA55D3","#EE82EE","#FFB6C1"]),
             ("💥", "EPIC",      ["#FF4500","#FF6347","#FF0000","#FF7F50","#FF3300"]),
-            ("🎶", "SLEEP", ["#7FFF00","#ADFF2F","#00FA9A","#98FB98","#00FF88"]),
+            ("🎶", "MUTE PLEASE", ["#7FFF00","#ADFF2F","#00FA9A","#98FB98","#00FF88"]),
             ("⚡", "GODLIKE",   ["#FFD700","#FF69B4","#00FFFF","#7FFF00","#FF4500"]),
         ]
 
