@@ -8,6 +8,8 @@ import requests
 import time
 import random
 import html  # Added for HTML sanitization
+from streamlit import fragment
+import streamlit.components.v1 as components
 
 # ==========================================================
 # 🖥️ DESKTOP FULL-WIDTH / WIDE LAYOUT CONFIGURATION
@@ -288,8 +290,7 @@ if "initialized" not in st.session_state:
 # Auto-refresh for non-managers
 is_manager_vc1 = st.session_state.current_user_vc1 == st.session_state.vc1_data["current_manager"]
 is_manager_vc2 = st.session_state.current_user_vc2 == st.session_state.vc2_data["current_manager"]
-if not is_manager_vc1 and not is_manager_vc2:
-    st_autorefresh(interval=3000)
+
 
 st.markdown("<h1 style='text-align: center; font-weight: 700; margin-bottom: 1rem;'>EPIC KARAOKE MANAGER</h1>", unsafe_allow_html=True)
 
@@ -436,32 +437,260 @@ def render_vc_content(vc_id):
     yt_col, dummy_col, actions_col = st.columns([3, 0.1, 1])
 
     with yt_col:
-        st.text_input(
-            "🎵 Search karaoke song (press Enter)",
-            key=yt_search_key,
-            on_change=handle_yt_search,
-            placeholder="e.g. Odysseus, Storm, Polyphemus...",
-            label_visibility="visible"
-        )
+        # ---- Song selector + Spin (moved here from Role Assignment panel) ----
+        _song_list_yt = list(EPIC_SONGS.keys())
+        _songs_with_none_yt = ["— Select a song —"] + _song_list_yt
+        _is_manager_yt = st.session_state[current_user_key] == vc_data["current_manager"]
+
+        # Handle spin triggered from this area
+        _spin_triggered_yt = False
+        if _is_manager_yt and st.session_state.get(f"{vc_id}_spin_btn"):
+            _spinner_ph = st.empty()
+            _spin_durations = [0.05]*10 + [0.1]*5 + [0.2]*3 + [0.4]*1
+            for _dur in _spin_durations:
+                _temp = random.choice(_song_list_yt)
+                _spinner_ph.markdown(
+                    f'<div style="text-align:center;padding:10px;background:#1e1e24;border:2px solid #ffaa00;border-radius:8px;">'
+                    f'<h3 style="color:#ffaa00;margin:0;">🎰 Spinning... 🎰</h3>'
+                    f'<p style="font-size:1.2rem;color:white;margin:5px 0 0 0;">✨ <b>{html.escape(_temp)}</b> ✨</p></div>',
+                    unsafe_allow_html=True
+                )
+                time.sleep(_dur)
+            _winning = random.choice(_song_list_yt)
+            _spinner_ph.empty()
+            history_key_yt = f"{vc_id}_role_history"
+            st.session_state[history_key_yt].append({
+                "selected_song": vc_data.get("selected_song", ""),
+                "role_assignments": dict(vc_data.get("role_assignments", {}))
+            })
+            vc_data["selected_song"] = _winning
+            vc_data["role_assignments"] = {}
+            active_song = _winning
+            save_state(vc_id, vc_data)
+            if vc_id == "vc1":
+                st.session_state.vc1_data = vc_data
+            else:
+                st.session_state.vc2_data = vc_data
+            st.session_state[f"{vc_id}_song_select"] = _winning
+            _yt_match = find_best_karaoke_match(_winning)
+            if _yt_match:
+                st.session_state[yt_url_key] = get_youtube_embed_url(_yt_match["url"])
+                st.session_state[yt_title_key] = _yt_match["title"]
+            st.toast(f"🎯 Landed on: {_winning}!")
+            _spin_triggered_yt = True
+
+        _current_song_yt = vc_data.get("selected_song", "")
+        _default_idx_yt = _songs_with_none_yt.index(_current_song_yt) if _current_song_yt in _songs_with_none_yt else 0
+
+        _song_spin_cols = st.columns([5, 1])
+        with _song_spin_cols[0]:
+            _chosen_song_yt = st.selectbox(
+                "🎵 Song",
+                _songs_with_none_yt,
+                index=_default_idx_yt,
+                key=f"{vc_id}_song_select",
+                disabled=not _is_manager_yt,
+                label_visibility="collapsed"
+            )
+        with _song_spin_cols[1]:
+            st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=not _is_manager_yt, use_container_width=True)
+
+        # Handle manual song selection
+        if _is_manager_yt and not _spin_triggered_yt and _chosen_song_yt != "— Select a song —" and _chosen_song_yt != _current_song_yt:
+            _hist_key = f"{vc_id}_role_history"
+            st.session_state[_hist_key].append({
+                "selected_song": vc_data.get("selected_song", ""),
+                "role_assignments": dict(vc_data.get("role_assignments", {}))
+            })
+            vc_data["selected_song"] = _chosen_song_yt
+            vc_data["role_assignments"] = {}
+            active_song = _chosen_song_yt
+            _yt_match2 = find_best_karaoke_match(_chosen_song_yt)
+            if _yt_match2:
+                st.session_state[yt_url_key] = get_youtube_embed_url(_yt_match2["url"])
+                st.session_state[yt_title_key] = _yt_match2["title"]
+            save_state(vc_id, vc_data)
+            if vc_id == "vc1":
+                st.session_state.vc1_data = vc_data
+            else:
+                st.session_state.vc2_data = vc_data
+            st.session_state[f"{vc_id}_auto_reaction"] = True
+            st.rerun()
+
+        if _spin_triggered_yt:
+            st.session_state[f"{vc_id}_auto_reaction"] = True
+            st.balloons()
+            st.rerun()
 
         if st.session_state[yt_title_key]:
             st.caption(f"🎤 Now playing: **{html.escape(st.session_state[yt_title_key])}**")
 
-        if st.session_state[yt_url_key]:
-            st.components.v1.iframe(
-                st.session_state[yt_url_key],
-                height=800,
-                scrolling=False
-            )
+        # ---- REACTION BUTTONS ----
+        REACTIONS = [
+            ("🔥", "LEGENDARY", ["#FFD700","#FFA500","#FF8C00","#FFEC8B","#FF6600"]),
+            ("✨", "AMAZING",   ["#00FFFF","#00BFFF","#1E90FF","#87CEFA","#AADDFF"]),
+            ("👑", "ICONIC",    ["#DA70D6","#FF69B4","#BA55D3","#EE82EE","#FFB6C1"]),
+            ("💥", "EPIC",      ["#FF4500","#FF6347","#FF0000","#FF7F50","#FF3300"]),
+            ("🎶", "BEAUTIFUL", ["#7FFF00","#ADFF2F","#00FA9A","#98FB98","#00FF88"]),
+            ("⚡", "GODLIKE",   ["#FFD700","#FF69B4","#00FFFF","#7FFF00","#FF4500"]),
+        ]
+
+        # Auto-trigger a silent random reaction after song change to consume the forced iframe reload
+        if st.session_state.pop(f"{vc_id}_auto_reaction", False):
+            _auto = random.choice(REACTIONS)
+            reaction_triggered = _auto[1]
+            reaction_colors = _auto[2]
         else:
-            st.markdown(
-                """
-                <div style="height:800px; display:flex; align-items:center; justify-content:center;
-                     background:#0e0e16; border:2px dashed #444; border-radius:10px; color:#888; font-size:1.1rem;">
-                    🎬 Search a song above to load the karaoke video
-                </div>
+            reaction_triggered = None
+            reaction_colors = None
+
+        rcols = st.columns(len(REACTIONS))
+        for idx, (emoji, word, _colors) in enumerate(REACTIONS):
+            with rcols[idx]:
+                if st.button(f"{emoji} {word}", key=f"{vc_id}_react_{word}", use_container_width=True):
+                    reaction_triggered = word
+                    reaction_colors = _colors
+
+        # Inject fireworks into the MAIN page via components.html + window.parent
+        # No st.rerun() — we fire immediately in the same render pass so the iframe is never rebuilt
+        if reaction_triggered:
+            _colors_js = str(reaction_colors)
+            _word_js = reaction_triggered
+            # --- FIX: ALWAYS RENDER THE COMPONENT TO STABILIZE THE DOM TREE ---
+        import streamlit.components.v1 as _components
+        
+        fireworks_injection = ""
+        
+        if reaction_triggered:
+            _colors_js = str(reaction_colors)
+            _word_js = reaction_triggered
+            fireworks_injection = f"""<script>
+            (function() {{
+              var doc = window.parent.document;
+              var COLORS = {_colors_js};
+              var WORD = "{_word_js}";
+            
+              // Remove any existing overlays
+              ['__rx_canvas','__rx_word','__rx_kf'].forEach(function(id){{
+                var el = doc.getElementById(id); if(el) el.remove();
+              }});
+            
+              var canvas = doc.createElement('canvas');
+              canvas.id = '__rx_canvas';
+              canvas.style.cssText = 'position:fixed;top:0;left:0;width:100vw;height:100vh;pointer-events:none;z-index:2147483647;';
+              canvas.width = window.parent.innerWidth;
+              canvas.height = window.parent.innerHeight;
+              doc.body.appendChild(canvas);
+              var ctx = canvas.getContext('2d');
+            
+              var wordEl = doc.createElement('div');
+              wordEl.id = '__rx_word';
+              var c1=COLORS[0], c2=COLORS[Math.floor(COLORS.length/2)];
+              wordEl.innerText = WORD;
+              wordEl.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);' +
+                'font-size:clamp(3rem,10vw,7rem);font-weight:900;letter-spacing:0.1em;pointer-events:none;' +
+                'z-index:2147483647;white-space:nowrap;font-family:Georgia,serif;' +
+                'background:linear-gradient(135deg,'+c1+','+c2+');-webkit-background-clip:text;' +
+                '-webkit-text-fill-color:transparent;background-clip:text;' +
+                'filter:drop-shadow(0 0 20px '+c1+') drop-shadow(0 0 40px '+c2+');' +
+                'animation:__rxPop 3.2s ease forwards;';
+              doc.body.appendChild(wordEl);
+            
+              if (!doc.getElementById('__rx_kf')) {{
+                var s = doc.createElement('style'); s.id='__rx_kf';
+                s.textContent = '@keyframes __rxPop {{' +
+                  '0%{{transform:translate(-50%,-50%) scale(0) rotate(-8deg);opacity:0}}' +
+                  '15%{{transform:translate(-50%,-50%) scale(1.35) rotate(3deg);opacity:1}}' +
+                  '30%{{transform:translate(-50%,-50%) scale(1.0) rotate(0);opacity:1}}' +
+                  '72%{{transform:translate(-50%,-50%) scale(1.0) rotate(0);opacity:1}}' +
+                  '100%{{transform:translate(-50%,-50%) scale(0.5) rotate(5deg);opacity:0}}' +
+                '}}';
+                doc.head.appendChild(s);
+              }}
+            
+              var P=[];
+              function rnd(a,b){{return a+Math.random()*(b-a);}}
+              function burst(x,y,n){{
+                for(var i=0;i<n;i++){{
+                  var angle=(Math.PI*2*i)/n+rnd(-0.4,0.4), speed=rnd(3,15);
+                  P.push({{x:x,y:y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,
+                    alpha:1,size:rnd(4,11),color:COLORS[Math.floor(Math.random()*COLORS.length)],
+                    type:Math.random()<0.5?'star':'circle',grav:rnd(0.1,0.35),decay:rnd(0.013,0.025)}});
+                }}
+              }}
+              function sparkle(x,y){{
+                for(var i=0;i<6;i++){{
+                  var a=Math.random()*Math.PI*2,sp=rnd(1,5);
+                  P.push({{x:x,y:y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp-rnd(1,3),
+                    alpha:1,size:rnd(2,7),color:COLORS[Math.floor(Math.random()*COLORS.length)],
+                    type:'plus',grav:0.05,decay:rnd(0.025,0.05)}});
+                }}
+              }}
+              function dStar(x,y,r,color,alpha){{
+                ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.shadowColor=color;ctx.shadowBlur=10;
+                ctx.beginPath();
+                for(var i=0;i<5;i++){{
+                  var oa=(Math.PI*2*i)/5-Math.PI/2,ia=oa+Math.PI/5;
+                  i===0?ctx.moveTo(x+Math.cos(oa)*r,y+Math.sin(oa)*r):ctx.lineTo(x+Math.cos(oa)*r,y+Math.sin(oa)*r);
+                  ctx.lineTo(x+Math.cos(ia)*r*.45,y+Math.sin(ia)*r*.45);
+                }}
+                ctx.closePath();ctx.fill();ctx.restore();
+              }}
+              function dPlus(x,y,r,color,alpha){{
+                ctx.save();ctx.globalAlpha=alpha;ctx.strokeStyle=color;ctx.shadowColor=color;ctx.shadowBlur=12;ctx.lineWidth=2.5;
+                ctx.beginPath();
+                ctx.moveTo(x-r,y);ctx.lineTo(x+r,y);ctx.moveTo(x,y-r);ctx.lineTo(x,y+r);
+                ctx.moveTo(x-r*.7,y-r*.7);ctx.lineTo(x+r*.7,y+r*.7);ctx.moveTo(x+r*.7,y-r*.7);ctx.lineTo(x-r*.7,y+r*.7);
+                ctx.stroke();ctx.restore();
+              }}
+            
+              var W=canvas.width,H=canvas.height;
+              burst(W*.5,H*.3,65);burst(W*.2,H*.4,30);burst(W*.8,H*.4,30);burst(W*.15,H*.7,25);burst(W*.85,H*.7,25);
+              var bT=0,sT=0,elapsed=0,DUR=3400,last=performance.now();
+            
+              function frame(now){{
+                var dt=now-last;last=now;elapsed+=dt;
+                ctx.clearRect(0,0,W,H);
+                bT+=dt; if(bT>280&&elapsed<DUR*.75){{bT=0;burst(rnd(W*.05,W*.95),rnd(H*.05,H*.6),rnd(18,38));}}
+                sT+=dt; if(sT>70&&elapsed<DUR*.8){{sT=0;sparkle(rnd(30,W-30),rnd(30,H-30));}}
+                for(var i=P.length-1;i>=0;i--){{
+                  var p=P[i];
+                  p.vy+=p.grav;p.x+=p.vx;p.y+=p.vy;p.vx*=.98;p.alpha-=p.decay;
+                  var a=Math.max(0,p.alpha);
+                  if(p.type==='star')dStar(p.x,p.y,p.size,p.color,a);
+                  else if(p.type==='plus')dPlus(p.x,p.y,p.size,p.color,a);
+                  else{{ctx.save();ctx.globalAlpha=a;ctx.fillStyle=p.color;ctx.shadowColor=p.color;ctx.shadowBlur=6;
+                    ctx.beginPath();ctx.arc(p.x,p.y,p.size,0,Math.PI*2);ctx.fill();ctx.restore();}}
+                  if(p.alpha<=0)P.splice(i,1);
+                }}
+                if(elapsed<DUR+500)requestAnimationFrame(frame);
+                else{{canvas.remove();wordEl.remove();}}
+              }}
+              requestAnimationFrame(frame);
+            }})();
+            </script>"""
+
+        # We execute this component unconditionally. If there's no reaction, it injects an empty string.
+        # This keeps the YouTube iframe locked in its exact React index!
+        _components.html(fireworks_injection, height=0, scrolling=False)
+        # ------------------------------------------------------------------, height=0, scrolling=False)
+
+        if st.session_state[yt_url_key]:
+            _iframe_url = html.escape(st.session_state[yt_url_key], quote=True)
+            
+            components.html(
+                f"""
+                <iframe
+                    src="{_iframe_url}"
+                    width="100%"
+                    height="800"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write;
+                           encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen>
+                </iframe>
                 """,
-                unsafe_allow_html=True
+                height=800,
             )
 
     with actions_col:
@@ -560,7 +789,7 @@ def render_vc_content(vc_id):
                     st.session_state.vc1_data = vc_data
                 else:
                     st.session_state.vc2_data = vc_data
-                st.rerun()
+                #st.rerun()
 
         input_col, button_col = st.columns([3, 1])
 
@@ -788,7 +1017,7 @@ def render_vc_content(vc_id):
 
                 # Sanitize template variables before formatting codeblock presentation block
                 t_title = html.escape(current_template.get('title', ''))
-                t_url = html.escape(current_template.get('url', ''))
+                t_url = current_template.get('url', '')
                 t_tmpl = html.escape(vc_data['current_template'])
                 t_mngr = html.escape(vc_data['current_manager'] if vc_data['current_manager'] else '-')
                 t_song = html.escape(active_song)
@@ -821,115 +1050,17 @@ def render_vc_content(vc_id):
                 st.code(output, language="text")
 
         # =========================================================
-        # 👉 RIGHT MAIN COLUMN: SONG & ROLE ASSIGNMENT
+        # 👉 RIGHT MAIN COLUMN: ROLE ASSIGNMENT
         # =========================================================
         with roles_panel_col:
             st.markdown("---")
-            st.markdown("### 🎵 Song & Role Assignment")
+            st.markdown("### 🎭 Role Assignment")
 
             history_key = f"{vc_id}_role_history"
             is_manager = st.session_state[current_user_key] == vc_data["current_manager"]
             song_list = list(EPIC_SONGS.keys())
 
-            spin_triggered = False
-            
-            if is_manager and st.session_state.get(f"{vc_id}_spin_btn"):
-                spinner_placeholder = st.empty()
-                spin_durations = [0.05] * 10 + [0.1] * 5 + [0.2] * 3 + [0.4] * 1
-                
-                for duration in spin_durations:
-                    temp_song = random.choice(song_list)
-                    spinner_placeholder.markdown(
-                        f"""
-                        <div style="text-align: center; padding: 10px; background-color: #1e1e24; border: 2px solid #ffaa00; border-radius: 8px; margin-bottom: 10px;">
-                            <h3 style="color: #ffaa00; margin: 0;">🎰 Spinning... 🎰</h3>
-                            <p style="font-size: 1.2rem; color: white; margin: 5px 0 0 0;">✨ <b>{html.escape(temp_song)}</b> ✨</p>
-                        </div>
-                        """, 
-                        unsafe_allow_html=True
-                    )
-                    time.sleep(duration)
-                    
-                winning_song = random.choice(song_list)
-                spinner_placeholder.empty()
-                
-                st.session_state[history_key].append({
-                    "selected_song": vc_data.get("selected_song", ""),
-                    "role_assignments": dict(vc_data.get("role_assignments", {}))
-                })
-                
-                vc_data["selected_song"] = winning_song
-                vc_data["role_assignments"] = {} 
-                active_song = winning_song
-                save_state(vc_id, vc_data)
-                
-                if vc_id == "vc1":
-                    st.session_state.vc1_data = vc_data
-                else:
-                    st.session_state.vc2_data = vc_data
-                    
-                st.session_state[f"{vc_id}_song_select"] = winning_song
-                yt_match = find_best_karaoke_match(winning_song)
-                if yt_match:
-                    st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
-                    st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
-                st.toast(f"🎯 Landed on: {winning_song}!")
-                spin_triggered = True
-
-            spin_cols = st.columns([3, 1])
-            with spin_cols[0]:
-                search_query = st.text_input(
-                    "🔍 Search song",
-                    key=f"{vc_id}_song_search",
-                    placeholder="Type to filter songs...",
-                    disabled=not is_manager,
-                    label_visibility="collapsed"
-                )
-                
-                filtered_songs = [s for s in song_list if search_query.lower() in s.lower()] if search_query else song_list
-                filtered_songs_with_none = ["— Select a song —"] + filtered_songs
-
-                current_song = vc_data.get("selected_song", "")
-                if not current_song or current_song not in filtered_songs_with_none:
-                    default_idx = 0
-                else:
-                    default_idx = filtered_songs_with_none.index(current_song)
-
-                chosen_song = st.selectbox(
-                    "Song",
-                    filtered_songs_with_none,
-                    index=default_idx,
-                    key=f"{vc_id}_song_select",
-                    disabled=not is_manager,
-                    label_visibility="collapsed"
-                )
-
-            with spin_cols[1]:
-                spin_disabled = not is_manager or len(filtered_songs) == 0
-                st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=spin_disabled, use_container_width=True)
-
-            if is_manager and not spin_triggered and chosen_song != "— Select a song —" and chosen_song != current_song:
-                st.session_state[history_key].append({
-                    "selected_song": vc_data.get("selected_song", ""),
-                    "role_assignments": dict(vc_data.get("role_assignments", {}))
-                })
-                vc_data["selected_song"] = chosen_song
-                vc_data["role_assignments"] = {}
-                active_song = chosen_song
-                yt_match = find_best_karaoke_match(chosen_song)
-                if yt_match:
-                    st.session_state[f"{vc_id}_yt_current_url"] = get_youtube_embed_url(yt_match["url"])
-                    st.session_state[f"{vc_id}_yt_current_title"] = yt_match["title"]
-                save_state(vc_id, vc_data)
-                if vc_id == "vc1":
-                    st.session_state.vc1_data = vc_data
-                else:
-                    st.session_state.vc2_data = vc_data
-                st.rerun()
-
-            if spin_triggered:
-                st.balloons()
-                st.rerun()
+            current_song = vc_data.get("selected_song", "")
 
             if active_song and active_song in EPIC_SONGS:
                 roles = EPIC_SONGS[active_song]
@@ -1163,7 +1294,7 @@ elif selected_tab == "✨ Customize":
     
     # Escape fields explicitly so they render harmlessly in the preview text area
     p_title = html.escape(preview_template['title'])
-    p_url = html.escape(preview_template['url'])
+    p_url = preview_template['url']
     p_curr_sing = html.escape(preview_template['currently_singing'])
     p_curr_sym = html.escape(preview_template['current_symbol'])
     p_next_up = html.escape(preview_template['next_up'])
@@ -1279,5 +1410,31 @@ st.markdown("""
     }
     div[data-testid="stHorizontalBlock"] { gap: 6px !important; }
     div[data-testid="stVerticalBlock"] { gap: 4px !important; }
+
+    /* Reaction pill buttons */
+    button[data-testid^="baseButton"] {
+        line-height: 1.3 !important;
+    }
     </style>
 """, unsafe_allow_html=True)
+
+# Auto-select-all text in Streamlit selectbox on click
+import streamlit.components.v1 as _components_global
+_components_global.html("""<script>
+(function() {
+  function attachSelectAll() {
+    var inputs = window.parent.document.querySelectorAll('[data-baseweb="select"] input');
+    inputs.forEach(function(inp) {
+      if (!inp.__rxSelectAll) {
+        inp.__rxSelectAll = true;
+        inp.addEventListener('click', function() { this.select(); });
+        inp.addEventListener('focus', function() { this.select(); });
+      }
+    });
+  }
+  // Run on load and watch for new elements
+  attachSelectAll();
+  var obs = new MutationObserver(attachSelectAll);
+  obs.observe(window.parent.document.body, {childList: true, subtree: true});
+})();
+</script>""", height=0)
