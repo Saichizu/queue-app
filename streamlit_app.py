@@ -65,7 +65,8 @@ EPIC_SONGS = {
     "I Can't Help but Wonder": ["Odysseus", "Telemachus"],
     "Would You Fall in Love with Me Again": ["Odysseus", "Penelope"],
     "Olive Tree": ["Odysseus", "Penelope"],
-    "Your LIght": ["Odysseus", "Polites"]
+    "Your LIght": ["Odysseus", "Polites"],
+    "In Vain": ["Posseidon"]
 }
 
 KARAOKE_SONGS = [
@@ -110,7 +111,8 @@ KARAOKE_SONGS = [
     {"title": "I Can't Help but Wonder", "url": "https://www.youtube.com/watch?v=v6qVpnoyLuk"},
     {"title": "Would You Fall in Love with Me Again", "url": "https://www.youtube.com/watch?v=GEyvmZqOv0g"},
     {"title": "Olive Tree", "url": "https://www.youtube.com/watch?v=xDG5VKScZDY"},  
-    {"title": "Your Light", "url": "https://www.youtube.com/watch?v=JxpKzQqT5YM"}   
+    {"title": "Your Light", "url": "https://www.youtube.com/watch?v=JxpKzQqT5YM"},
+    {"title": "In Vain", "url": "https://www.youtube.com/watch?v=_28-ZLNxoPU"}    
 ]
 
 def find_best_karaoke_match(query):
