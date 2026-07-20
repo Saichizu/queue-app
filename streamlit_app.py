@@ -204,6 +204,7 @@ def load_state(vc_id):
             "selected_song": data.get("selected_song", ""),
             "role_assignments": data.get("role_assignments", {}),
             "custom_roles": data.get("custom_roles", {}),
+            "custom_reactions": data.get("custom_reactions", {}),
         }
     return {
         "queue": [],
@@ -215,6 +216,7 @@ def load_state(vc_id):
         "selected_song": "",
         "role_assignments": {},
         "custom_roles": {},
+        "custom_reactions": {},
     }
 
 def save_state(vc_id, state):
@@ -230,6 +232,7 @@ def save_state(vc_id, state):
         "selected_song": state.get("selected_song", ""),
         "role_assignments": state.get("role_assignments", {}),
         "custom_roles": state.get("custom_roles", {}),
+        "custom_reactions": state.get("custom_reactions", {}),
     }
     with open(save_file, "w", encoding="utf-8") as f:
         json.dump(data, f)
@@ -556,7 +559,7 @@ def render_vc_content(vc_id):
             st.caption(f"🎤 Now playing: **{html.escape(st.session_state[yt_title_key])}**")
 
         # ---- REACTION BUTTONS ----
-        REACTIONS = [
+        DEFAULT_REACTIONS = [
             ("🔥", "LEGENDARY", ["#FFD700","#FFA500","#FF8C00","#FFEC8B","#FF6600"]),
             ("✨", "AMAZING",   ["#00FFFF","#00BFFF","#1E90FF","#87CEFA","#AADDFF"]),
             ("👑", "ICONIC",    ["#DA70D6","#FF69B4","#BA55D3","#EE82EE","#FFB6C1"]),
@@ -564,6 +567,51 @@ def render_vc_content(vc_id):
             ("🎶", "CHEESE APPROVED", ["#7FFF00","#ADFF2F","#00FA9A","#98FB98","#00FF88"]),
             ("⚡", "GODLIKE",   ["#FFD700","#FF69B4","#00FFFF","#7FFF00","#FF4500"]),
         ]
+
+        REACTION_TEXT_LIMIT = 15
+        custom_reactions_map = vc_data.get("custom_reactions", {})
+        REACTIONS = [
+            (emoji, (custom_reactions_map.get(emoji, word) or word)[:REACTION_TEXT_LIMIT], colors)
+            for (emoji, word, colors) in DEFAULT_REACTIONS
+        ]
+
+        react_header_col, react_edit_col = st.columns([6, 1])
+        with react_edit_col:
+            react_edit_toggle_key = f"{vc_id}_reaction_edit_toggle"
+            if st.button("✏️", key=f"{vc_id}_reaction_edit_btn", help="Edit reaction texts", use_container_width=True):
+                st.session_state[react_edit_toggle_key] = not st.session_state.get(react_edit_toggle_key, False)
+
+        if st.session_state.get(react_edit_toggle_key, False):
+            with st.container(border=True):
+                st.markdown(f"✏️ **Edit reaction texts** (max {REACTION_TEXT_LIMIT} letters, no passcode needed)")
+                new_custom_reactions = dict(custom_reactions_map)
+                for emoji, word, _colors in DEFAULT_REACTIONS:
+                    current_val = custom_reactions_map.get(emoji, word)
+                    edited_val = st.text_input(
+                        f"{emoji} text",
+                        value=current_val,
+                        max_chars=REACTION_TEXT_LIMIT,
+                        key=f"{vc_id}_reaction_text_{emoji}"
+                    ).strip()
+                    if edited_val and edited_val != word:
+                        new_custom_reactions[emoji] = edited_val[:REACTION_TEXT_LIMIT]
+                    elif edited_val == word and emoji in new_custom_reactions:
+                        new_custom_reactions.pop(emoji)
+                edit_save_col, edit_close_col = st.columns(2)
+                with edit_save_col:
+                    if st.button("💾 Save", key=f"{vc_id}_reaction_save", use_container_width=True):
+                        vc_data["custom_reactions"] = new_custom_reactions
+                        save_state(vc_id, vc_data)
+                        if vc_id == "vc1":
+                            st.session_state.vc1_data = vc_data
+                        else:
+                            st.session_state.vc2_data = vc_data
+                        st.session_state[react_edit_toggle_key] = False
+                        st.rerun()
+                with edit_close_col:
+                    if st.button("✖️ Cancel", key=f"{vc_id}_reaction_cancel", use_container_width=True):
+                        st.session_state[react_edit_toggle_key] = False
+                        st.rerun()
 
         # Auto-trigger a silent random reaction after song change to consume the forced iframe reload
         if st.session_state.pop(f"{vc_id}_auto_reaction", False):
