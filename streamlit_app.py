@@ -468,13 +468,13 @@ def render_vc_content(vc_id):
         set_yt_from_song_title(active_song)
 
     yt_col, dummy_col, actions_col = st.columns([3, 0.1, 1])
-
+    
     with yt_col:
         # ---- Song selector + Spin (moved here from Role Assignment panel) ----
         _song_list_yt = list(EPIC_SONGS.keys())
         _songs_with_none_yt = ["— Select a song —"] + _song_list_yt
         _is_manager_yt = st.session_state[current_user_key] == vc_data["current_manager"]
-
+    
         # Handle spin triggered from this area
         _spin_triggered_yt = False
         if _is_manager_yt and st.session_state.get(f"{vc_id}_spin_btn"):
@@ -511,11 +511,12 @@ def render_vc_content(vc_id):
                 st.session_state[yt_title_key] = _yt_match["title"]
             st.toast(f"🎯 Landed on: {_winning}!")
             _spin_triggered_yt = True
-
+    
         _current_song_yt = vc_data.get("selected_song", "")
         _default_idx_yt = _songs_with_none_yt.index(_current_song_yt) if _current_song_yt in _songs_with_none_yt else 0
-
-        _song_spin_cols = st.columns([5, 1])
+    
+        # NEW LAYOUT: Song selector (smaller) + Spin + Reaction edit button
+        _song_spin_cols = st.columns([2.5, 1, 1])  # Reduced song field from 5 to 2.5
         with _song_spin_cols[0]:
             _chosen_song_yt = st.selectbox(
                 "🎵 Song",
@@ -527,7 +528,12 @@ def render_vc_content(vc_id):
             )
         with _song_spin_cols[1]:
             st.button("🎰 Spin!", key=f"{vc_id}_spin_btn", disabled=not _is_manager_yt, use_container_width=True)
-
+        
+        with _song_spin_cols[2]:
+            react_edit_toggle_key = f"{vc_id}_reaction_edit_toggle"
+            if st.button("✏️", key=f"{vc_id}_reaction_edit_btn", help="Edit reaction texts", use_container_width=True):
+                st.session_state[react_edit_toggle_key] = not st.session_state.get(react_edit_toggle_key, False)
+    
         # Handle manual song selection
         if _is_manager_yt and not _spin_triggered_yt and _chosen_song_yt != "— Select a song —" and _chosen_song_yt != _current_song_yt:
             _hist_key = f"{vc_id}_role_history"
@@ -549,15 +555,15 @@ def render_vc_content(vc_id):
                 st.session_state.vc2_data = vc_data
             st.session_state[f"{vc_id}_auto_reaction"] = True
             st.rerun()
-
+    
         if _spin_triggered_yt:
             st.session_state[f"{vc_id}_auto_reaction"] = True
             st.balloons()
             st.rerun()
-
+    
         if st.session_state[yt_title_key]:
             st.caption(f"🎤 Now playing: **{html.escape(st.session_state[yt_title_key])}**")
-
+    
         # ---- REACTION BUTTONS ----
         DEFAULT_REACTIONS = [
             ("🔥", "LEGENDARY", ["#FFD700","#FFA500","#FF8C00","#FFEC8B","#FF6600"]),
@@ -567,20 +573,17 @@ def render_vc_content(vc_id):
             ("🎶", "CHEESE APPROVED", ["#7FFF00","#ADFF2F","#00FA9A","#98FB98","#00FF88"]),
             ("⚡", "GODLIKE",   ["#FFD700","#FF69B4","#00FFFF","#7FFF00","#FF4500"]),
         ]
-
+    
         REACTION_TEXT_LIMIT = 15
         custom_reactions_map = vc_data.get("custom_reactions", {})
         REACTIONS = [
             (emoji, (custom_reactions_map.get(emoji, word) or word)[:REACTION_TEXT_LIMIT], colors)
             for (emoji, word, colors) in DEFAULT_REACTIONS
         ]
-
-        react_header_col, react_edit_col = st.columns([6, 1])
-        with react_edit_col:
-            react_edit_toggle_key = f"{vc_id}_reaction_edit_toggle"
-            if st.button("✏️", key=f"{vc_id}_reaction_edit_btn", help="Edit reaction texts", use_container_width=True):
-                st.session_state[react_edit_toggle_key] = not st.session_state.get(react_edit_toggle_key, False)
-
+    
+        # REMOVED: react_header_col, react_edit_col = st.columns([6, 1])
+        # Pencil button is now in _song_spin_cols above
+    
         if st.session_state.get(react_edit_toggle_key, False):
             with st.container(border=True):
                 st.markdown(f"✏️ **Edit reaction texts** (max {REACTION_TEXT_LIMIT} letters, no passcode needed)")
@@ -612,6 +615,7 @@ def render_vc_content(vc_id):
                     if st.button("✖️ Cancel", key=f"{vc_id}_reaction_cancel", use_container_width=True):
                         st.session_state[react_edit_toggle_key] = False
                         st.rerun()
+
 
         # Auto-trigger a silent random reaction after song change to consume the forced iframe reload
         if st.session_state.pop(f"{vc_id}_auto_reaction", False):
