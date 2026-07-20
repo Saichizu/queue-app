@@ -70,24 +70,24 @@ EPIC_SONGS = {
 }
 
 KARAOKE_SONGS = [
-    {"title": "The Horse and the Infant", "url": "https://www.youtube.com/watch?v=YZfPD0btgzA"},
-    {"title": "Just a Man", "url": "https://www.youtube.com/watch?v=Y8dXa_OY7wU"},
-    {"title": "Full Speed Ahead", "url": "https://www.youtube.com/watch?v=5rqbG4uHbgs"},
-    {"title": "Open Arms", "url": "https://www.youtube.com/watch?v=McPwEM2E-kA"},
-    {"title": "Warrior of the Mind", "url": "https://www.youtube.com/watch?v=2SZQ-C2od5I"},
-    {"title": "Polyphemus", "url": "https://www.youtube.com/watch?v=V7J5leX5YSI"},
-    {"title": "Survive", "url": "https://www.youtube.com/watch?v=0AAAQEPpC48"},
-    {"title": "Remember Them", "url": "https://www.youtube.com/watch?v=m1cmIF-bOjE"},
-    {"title": "My Goodbye", "url": "https://www.youtube.com/watch?v=6TUtiuD2S6I"},
-    {"title": "Storm", "url": "https://www.youtube.com/watch?v=23sr9u6dWvc"},
-    {"title": "Luck Runs Out", "url": "https://www.youtube.com/watch?v=ot_ZjHetnu8"},
-    {"title": "Keep Your Friends Close", "url": "https://www.youtube.com/watch?v=uuLIWp5APb4"},
-    {"title": "Ruthlessness", "url": "https://www.youtube.com/watch?v=R3qVgou4A9M"},
-    {"title": "Puppeteer", "url": "https://www.youtube.com/watch?v=dOQdxdGRZts"},
-    {"title": "Wouldn't You Like", "url": "https://www.youtube.com/watch?v=bcQge1DrhJ0"},
-    {"title": "Done For", "url": "https://www.youtube.com/watch?v=YEnjUfILZks"},
-    {"title": "There Are Other Ways", "url": "https://www.youtube.com/watch?v=DXyU4lgOdNg"},
-    {"title": "The Underworld", "url": "https://www.youtube.com/watch?v=nPLCZTYa7X8"},
+    {"title": "The Horse and the Infant", "url": "https://www.youtube.com/watch?v=s9yC83t-43U"},
+    {"title": "Just a Man", "url": "https://www.youtube.com/watch?v=ZB7vfy7V1FY"},
+    {"title": "Full Speed Ahead", "url": "https://www.youtube.com/watch?v=jzC7_dEzGG8"},
+    {"title": "Open Arms", "url": "https://www.youtube.com/watch?v=a7Frzd7qKys"},
+    {"title": "Warrior of the Mind", "url": "https://www.youtube.com/watch?v=yTacPhQxgBc"},
+    {"title": "Polyphemus", "url": "https://www.youtube.com/watch?v=C5GjdJjYk5c"},
+    {"title": "Survive", "url": "https://www.youtube.com/watch?v=y6kpHkHomEE"},
+    {"title": "Remember Them", "url": "https://www.youtube.com/watch?v=qZitYcJ3IJs"},
+    {"title": "My Goodbye", "url": "https://www.youtube.com/watch?v=LgeyfqM7ocQ"},
+    {"title": "Storm", "url": "https://www.youtube.com/watch?v=bmNG2wtP5xE"},
+    {"title": "Luck Runs Out", "url": "https://www.youtube.com/watch?v=OtPkiKJ7xv4"},
+    {"title": "Keep Your Friends Close", "url": "https://www.youtube.com/watch?v=Im-A6to8p70"},
+    {"title": "Ruthlessness", "url": "https://www.youtube.com/watch?v=Q2sZySb1oyI"},
+    {"title": "Puppeteer", "url": "https://www.youtube.com/watch?v=D-JXTkOX3qc"},
+    {"title": "Wouldn't You Like", "url": "https://www.youtube.com/watch?v=CEinc00Hq4o"},
+    {"title": "Done For", "url": "https://www.youtube.com/watch?v=l-PHdYz_GKI"},
+    {"title": "There Are Other Ways", "url": "https://www.youtube.com/watch?v=CqlKbM2Bkyc"},
+    {"title": "The Underworld", "url": "https://www.youtube.com/watch?v=1AiCyMCnerw"},
     {"title": "No Longer You", "url": "https://www.youtube.com/watch?v=54ubVuVJD7Y"},
     {"title": "Monster", "url": "https://www.youtube.com/watch?v=5xEbWoPh-aU"},
     {"title": "Suffering", "url": "https://www.youtube.com/watch?v=HvnMShpTeYY"},
@@ -146,7 +146,28 @@ def get_youtube_embed_url(yt_url):
 SAVE_FILE = "queue.json"
 TEMPLATES_DIR = "templates"
 ADMIN_PASSCODE = "531246"
+ROLE_EDIT_PASSCODE = "010203"
 SYNC_CHECK_INTERVAL = 1  # Check for updates every 1 second
+
+# Symbol options for role icons in the Role Assignment editor
+ROLE_SYMBOL_OPTIONS = {
+    "⚡ Thunder": "⚡",
+    "⚔️ Sword": "⚔️",
+    "🌊 Wave": "🌊",
+    "👥 Group": "👥",
+    "👁️ Eye": "👁️",
+    "🎶 Note": "🎶",
+    "🔥 Fire": "🔥",
+    "🌙 Moon": "🌙",
+    "🦅 Eagle": "🦅",
+    "🛡️ Shield": "🛡️",
+    "👑 Crown": "👑",
+    "🌴 Palm": "🌴",
+    "💀 Skull": "💀",
+    "🐍 Serpent": "🐍",
+    "🌪️ Storm": "🌪️",
+    "🏹 Bow": "🏹",
+}
 
 if not os.path.exists(TEMPLATES_DIR):
     os.makedirs(TEMPLATES_DIR)
@@ -182,6 +203,7 @@ def load_state(vc_id):
             "last_modified": data.get("last_modified", 0),
             "selected_song": data.get("selected_song", ""),
             "role_assignments": data.get("role_assignments", {}),
+            "custom_roles": data.get("custom_roles", {}),
         }
     return {
         "queue": [],
@@ -192,6 +214,7 @@ def load_state(vc_id):
         "last_modified": time.time(),
         "selected_song": "",
         "role_assignments": {},
+        "custom_roles": {},
     }
 
 def save_state(vc_id, state):
@@ -206,6 +229,7 @@ def save_state(vc_id, state):
         "last_modified": time.time(),
         "selected_song": state.get("selected_song", ""),
         "role_assignments": state.get("role_assignments", {}),
+        "custom_roles": state.get("custom_roles", {}),
     }
     with open(save_file, "w", encoding="utf-8") as f:
         json.dump(data, f)
@@ -1069,7 +1093,10 @@ def render_vc_content(vc_id):
             current_song = vc_data.get("selected_song", "")
 
             if active_song and active_song in EPIC_SONGS:
-                roles = EPIC_SONGS[active_song]
+                custom_roles_map = vc_data.get("custom_roles", {})
+                song_custom = custom_roles_map.get(active_song, {})
+                roles = song_custom.get("roles", list(EPIC_SONGS[active_song]))
+                custom_icons = song_custom.get("icons", {})
                 
                 raw_assignments = vc_data.get("role_assignments", {})
                 assignments = {}
@@ -1080,9 +1107,137 @@ def render_vc_content(vc_id):
                         assignments[k] = [v] if v and v != "— Unassigned —" else []
 
                 all_people = vc_data["queue"]
-                st.markdown(f"**Assigning roles for:** *{html.escape(active_song)}*")
+
+                title_col, edit_col = st.columns([5, 1])
+                with title_col:
+                    st.markdown(f"**Assigning roles for:** *{html.escape(active_song)}*")
+                with edit_col:
+                    edit_toggle_key = f"{vc_id}_role_edit_toggle"
+                    if st.button("✏️", key=f"{vc_id}_role_edit_btn", help="Edit roles", use_container_width=True):
+                        st.session_state[edit_toggle_key] = not st.session_state.get(edit_toggle_key, False)
+
+                if st.session_state.get(edit_toggle_key, False):
+                    auth_key = f"{vc_id}_role_edit_authed"
+                    with st.container(border=True):
+                        if not st.session_state.get(auth_key, False):
+                            st.markdown("🔒 **Enter passcode to edit roles**")
+                            pc_col1, pc_col2 = st.columns([3, 1])
+                            with pc_col1:
+                                entered_pc = st.text_input(
+                                    "Passcode",
+                                    type="password",
+                                    key=f"{vc_id}_role_edit_pc",
+                                    label_visibility="collapsed",
+                                    placeholder="Passcode"
+                                )
+                            with pc_col2:
+                                if st.button("Unlock", key=f"{vc_id}_role_edit_unlock", use_container_width=True):
+                                    if entered_pc == ROLE_EDIT_PASSCODE:
+                                        st.session_state[auth_key] = True
+                                        st.rerun()
+                                    else:
+                                        st.error("❌ Incorrect passcode.")
+                        else:
+                            st.markdown(f"✏️ **Editing roles for *{html.escape(active_song)}***")
+
+                            # Existing roles: rename symbol + delete
+                            for r_idx, role_name in enumerate(list(roles)):
+                                er_col1, er_col2, er_col3 = st.columns([2, 2, 1])
+                                with er_col1:
+                                    st.markdown(f"{custom_icons.get(role_name, '')} {html.escape(role_name)}")
+                                with er_col2:
+                                    sym_options = list(ROLE_SYMBOL_OPTIONS.keys())
+                                    current_sym = custom_icons.get(role_name)
+                                    default_sym_idx = 0
+                                    for s_i, s_label in enumerate(sym_options):
+                                        if ROLE_SYMBOL_OPTIONS[s_label] == current_sym:
+                                            default_sym_idx = s_i
+                                            break
+                                    chosen_sym_label = st.selectbox(
+                                        "Symbol",
+                                        sym_options,
+                                        index=default_sym_idx,
+                                        key=f"{vc_id}_role_sym_{active_song}_{role_name}",
+                                        label_visibility="collapsed"
+                                    )
+                                    chosen_sym = ROLE_SYMBOL_OPTIONS[chosen_sym_label]
+                                    if custom_icons.get(role_name) != chosen_sym:
+                                        custom_icons[role_name] = chosen_sym
+                                        custom_roles_map.setdefault(active_song, {"roles": list(roles), "icons": {}})
+                                        custom_roles_map[active_song]["roles"] = list(roles)
+                                        custom_roles_map[active_song]["icons"] = custom_icons
+                                        vc_data["custom_roles"] = custom_roles_map
+                                        save_state(vc_id, vc_data)
+                                        if vc_id == "vc1":
+                                            st.session_state.vc1_data = vc_data
+                                        else:
+                                            st.session_state.vc2_data = vc_data
+                                        st.rerun()
+                                with er_col3:
+                                    if st.button("🗑️", key=f"{vc_id}_role_del_{active_song}_{role_name}", use_container_width=True):
+                                        new_roles = [r for r in roles if r != role_name]
+                                        custom_icons.pop(role_name, None)
+                                        custom_roles_map[active_song] = {"roles": new_roles, "icons": custom_icons}
+                                        vc_data["custom_roles"] = custom_roles_map
+                                        if role_name in assignments:
+                                            assignments.pop(role_name)
+                                            vc_data["role_assignments"] = assignments
+                                        save_state(vc_id, vc_data)
+                                        if vc_id == "vc1":
+                                            st.session_state.vc1_data = vc_data
+                                        else:
+                                            st.session_state.vc2_data = vc_data
+                                        st.rerun()
+
+                            st.markdown("---")
+                            st.markdown("**➕ Add a role**")
+                            add_col1, add_col2, add_col3 = st.columns([2, 2, 1])
+                            with add_col1:
+                                new_role_name = st.text_input(
+                                    "New role name",
+                                    key=f"{vc_id}_role_add_name_{active_song}",
+                                    label_visibility="collapsed",
+                                    placeholder="Role name",
+                                    max_chars=30
+                                )
+                            with add_col2:
+                                new_role_sym_label = st.selectbox(
+                                    "New role symbol",
+                                    list(ROLE_SYMBOL_OPTIONS.keys()),
+                                    key=f"{vc_id}_role_add_sym_{active_song}",
+                                    label_visibility="collapsed"
+                                )
+                            with add_col3:
+                                if st.button("Add", key=f"{vc_id}_role_add_btn_{active_song}", use_container_width=True):
+                                    clean_role = new_role_name.strip()
+                                    if clean_role and clean_role not in roles:
+                                        new_roles = list(roles) + [clean_role]
+                                        custom_icons[clean_role] = ROLE_SYMBOL_OPTIONS[new_role_sym_label]
+                                        custom_roles_map[active_song] = {"roles": new_roles, "icons": custom_icons}
+                                        vc_data["custom_roles"] = custom_roles_map
+                                        save_state(vc_id, vc_data)
+                                        if vc_id == "vc1":
+                                            st.session_state.vc1_data = vc_data
+                                        else:
+                                            st.session_state.vc2_data = vc_data
+                                        st.rerun()
+                                    elif clean_role in roles:
+                                        st.warning("That role already exists.")
+
+                            if st.button("🔒 Lock & Close Editor", key=f"{vc_id}_role_edit_lock", use_container_width=True):
+                                st.session_state[auth_key] = False
+                                st.session_state[edit_toggle_key] = False
+                                st.rerun()
+
+                    # Refresh local roles/icons after any edits made above
+                    custom_roles_map = vc_data.get("custom_roles", {})
+                    song_custom = custom_roles_map.get(active_song, {})
+                    roles = song_custom.get("roles", list(EPIC_SONGS[active_song]))
+                    custom_icons = song_custom.get("icons", {})
 
                 def role_icon(role):
+                    if role in custom_icons:
+                        return custom_icons[role]
                     r = role.lower()
                     if any(x in r for x in ["zeus", "poseidon", "athena", "hermes", "hera", "aphrodite", "ares", "apollo", "hephaestus"]):
                         return "⚡"
